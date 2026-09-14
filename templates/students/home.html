@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="card">
-    <h1>Hallo {{ student.display_name }}! 👋</h1>
+    <h1>Hallo {{ student.label }}! 👋</h1>
     <p class="subtitle">
         Du bist in der Klasse <strong>{{ student.school_class.name }}</strong>
         {% if student.school_class.subject %}({{ student.school_class.subject }}){% endif %}

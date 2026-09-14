@@ -30,12 +30,18 @@ persönlichen, zufälligen **Zugangscode**, den die Lehrkraft erzeugt.
 **Klassen & Schüler/innen**
 
 - **Klassen** (z. B. „5a – Informatik“) legt die Lehrkraft in **ihrer** Schule an.
-- **Schüler/innen hinzufügen** – einzeln oder mehrere auf einmal (eine Zeile
-  pro Name). Für jede/n wird automatisch ein eindeutiger 8-stelliger
-  Zugangscode erzeugt.
-- **Zugangscodes verwalten**: neu erzeugen, Schüler/in deaktivieren/aktivieren,
-  entfernen.
-- **Schüler-Login** nur mit Zugangscode; eigene Startseite pro Schüler/in.
+- **Schüler/innen anlegen** auf drei Wegen: als Anzahl anonymer Plätze
+  (#001, #002 …), einzeln mit optionalem Namen, oder als Namensliste. Jede/r
+  bekommt automatisch eine fortlaufende Nummer und einen eindeutigen
+  **12-stelligen Token** (Kleinbuchstaben, ohne verwechselbare Zeichen).
+- **Tokens verwalten**: neu erzeugen, deaktivieren/aktivieren, entfernen.
+- **Schüler-Login** ohne Konto – nur per Token: entweder auf der Startseite
+  (`/s/`) eintippen oder den **QR-Code scannen**, der direkt auf `/s/<token>/`
+  führt und einloggt. Ein Brute-Force-Schutz begrenzt Fehlversuche pro IP.
+- **QR-Druckdokument** pro Klasse (`🖨️`): A4-Seiten mit QR-Karten im
+  3×5-Raster zum Ausschneiden plus eine vertrauliche Lehrerliste für die
+  handschriftliche Namenszuordnung. Die QR-Codes werden **lokal auf dem
+  Server** erzeugt – die Tokens verlassen den Server nicht.
 - **Zugriffsschutz**: Eine Lehrkraft sieht ausschließlich ihre eigenen Klassen.
   Das Datenmodell ist bereits auf das spätere Teilen mit Kolleg/innen
   vorbereitet (Rollen `Inhaber` / `Kollege/Kollegin` pro Klasse), sodass

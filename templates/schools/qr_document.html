@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>QR-Codes – {{ school_class.name }}</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            color: #111;
+            background: #f0f0f0;
+        }
+        .toolbar {
+            position: sticky; top: 0;
+            background: #fff; border-bottom: 1px solid #ddd;
+            padding: 12px 20px; display: flex; gap: 12px; align-items: center;
+        }
+        .toolbar button, .toolbar a {
+            font: inherit; padding: 8px 16px; border-radius: 8px;
+            border: none; cursor: pointer; text-decoration: none;
+        }
+        .btn-print { background: #2f6fed; color: #fff; }
+        .btn-back { background: #eef1f6; color: #111; }
+        .hint { color: #666; font-size: 0.9rem; }
+
+        .print-page {
+            width: 210mm; min-height: 297mm;
+            margin: 12px auto; padding: 10mm;
+            background: #fff; box-shadow: 0 1px 6px rgba(0,0,0,.15);
+        }
+
+        .qr-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(5, 1fr);
+            gap: 4mm;
+            height: 277mm;
+        }
+        .qr-card {
+            border: 1px dashed #bbb; border-radius: 6px;
+            padding: 4mm; text-align: center;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            break-inside: avoid; page-break-inside: avoid;
+        }
+        .qr-card.empty { border: none; }
+        .qr-brand { font-weight: 700; font-size: 3.6mm; margin-bottom: 1.5mm; }
+        .qr-card .qr { width: 40mm; height: 40mm; }
+        .qr-card .qr svg { width: 100%; height: 100%; display: block; }
+        .qr-number { font-weight: 700; font-size: 5mm; margin-top: 1.5mm; }
+        .qr-class { font-size: 3.2mm; color: #444; }
+        .qr-token {
+            font-family: ui-monospace, Menlo, Consolas, monospace;
+            font-size: 3.4mm; letter-spacing: .05em; margin-top: 1mm;
+        }
+
+        /* Confidential teacher list */
+        .list-title { font-size: 6mm; margin: 0 0 2mm; }
+        .list-note { color: #b42318; font-size: 3.4mm; margin: 0 0 6mm; }
+        table.rollcall { width: 100%; border-collapse: collapse; }
+        table.rollcall th, table.rollcall td {
+            border: 1px solid #999; padding: 2.5mm 3mm; text-align: left; font-size: 3.6mm;
+        }
+        table.rollcall th { background: #f2f2f2; }
+        table.rollcall .name-col { width: 45%; }
+        .token-cell { font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+        @media print {
+            body { background: #fff; }
+            .no-print { display: none !important; }
+            .print-page {
+                margin: 0; box-shadow: none; width: auto; min-height: auto;
+                page-break-after: always;
+            }
+            .print-page:last-child { page-break-after: auto; }
+            @page { margin: 0; size: A4; }
+        }
+    </style>
+</head>
+<body>
+<div class="toolbar no-print">
+    <button class="btn-print" onclick="window.print()">🖨️ Drucken / als PDF speichern</button>
+    <a class="btn-back" href="{% url 'schools:class_detail' school_class.pk %}">← Zurück zur Klasse</a>
+    <span class="hint">
+        QR-Karten zum Ausschneiden. Die letzte Seite ist die vertrauliche
+        Namensliste (nicht aushändigen).
+    </span>
+</div>
+
+{% for page in pages %}
+<div class="print-page">
+    <div class="qr-grid">
+        {% for card in page %}
+            {% if card %}
+                <div class="qr-card">
+                    <div class="qr-brand">📚 Schulplattform</div>
+                    <div class="qr">{{ card.svg }}</div>
+                    <div class="qr-number">{{ card.student.number_label }}</div>
+                    <div class="qr-class">Klasse: {{ school_class.name }}</div>
+                    <div class="qr-token">{{ card.student.access_code }}</div>
+                </div>
+            {% else %}
+                <div class="qr-card empty"></div>
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endfor %}
+
+<div class="print-page">
+    <h1 class="list-title">Vertrauliche Namensliste – {{ school_class.name }}</h1>
+    <p class="list-note">
+        ⚠️ Nur für die Lehrkraft. Diese Seite ordnet Nummern/Tokens den echten
+        Namen zu – nicht an Schüler/innen austeilen.
+    </p>
+    <table class="rollcall">
+        <thead>
+            <tr>
+                <th>Nr.</th>
+                <th>Token</th>
+                <th class="name-col">Name (handschriftlich)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for student in students %}
+                <tr>
+                    <td>{{ student.number_label }}</td>
+                    <td class="token-cell">{{ student.access_code }}</td>
+                    <td>{{ student.display_name }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

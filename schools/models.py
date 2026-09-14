@@ -2,13 +2,14 @@ import secrets
 
 from django.conf import settings
 from django.db import models
+from django.db.models import Max
 from django.urls import reverse
 
-# Alphabet for student access codes. Deliberately excludes visually
-# ambiguous characters (0/O, 1/I/L) so codes are easy to read aloud and
-# type on a phone. All uppercase for the same reason.
-ACCESS_CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
-ACCESS_CODE_LENGTH = 8
+# Alphabet for student access tokens. Deliberately excludes visually
+# ambiguous characters (l, o, i, 0, 1) so tokens are easy to read aloud and
+# type on a phone. Lowercase, 12 characters (like the VokaGo tokens).
+ACCESS_CODE_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"
+ACCESS_CODE_LENGTH = 12
 
 
 def generate_access_code(length=ACCESS_CODE_LENGTH):
@@ -138,7 +139,13 @@ class Student(models.Model):
         on_delete=models.CASCADE,
         related_name="students",
     )
-    display_name = models.CharField("Anzeigename", max_length=150)
+    # Sequential number within the class (#001, #002 ...). Assigned
+    # automatically. The primary identifier shown on QR cards.
+    number = models.PositiveIntegerField("Nummer", null=True, blank=True)
+    # Optional display name for the teacher's convenience. May be left empty
+    # to store no personal data at all (data minimisation); the teacher then
+    # maps numbers to real names on the printed, confidential list.
+    display_name = models.CharField("Anzeigename", max_length=150, blank=True)
     access_code = models.CharField(max_length=16, unique=True, editable=False)
     is_active = models.BooleanField("aktiv", default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -146,14 +153,34 @@ class Student(models.Model):
     class Meta:
         verbose_name = "Schüler/in"
         verbose_name_plural = "Schüler/innen"
-        ordering = ["display_name"]
+        ordering = ["number", "display_name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["school_class", "number"],
+                name="unique_number_per_class",
+            )
+        ]
 
     def __str__(self):
-        return self.display_name
+        return self.label
+
+    @property
+    def number_label(self):
+        return f"#{self.number:03d}" if self.number else ""
+
+    @property
+    def label(self):
+        """A human-facing label: the display name if set, else the number."""
+        return self.display_name or self.number_label or "—"
 
     def save(self, *args, **kwargs):
         if not self.access_code:
             self.access_code = self._generate_unique_access_code()
+        if self.number is None and self.school_class_id:
+            last = Student.objects.filter(
+                school_class_id=self.school_class_id
+            ).aggregate(m=Max("number"))["m"]
+            self.number = (last or 0) + 1
         super().save(*args, **kwargs)
 
     @staticmethod

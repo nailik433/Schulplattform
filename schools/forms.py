@@ -19,18 +19,31 @@ class StudentForm(forms.ModelForm):
         fields = ["display_name"]
         widgets = {
             "display_name": forms.TextInput(
-                attrs={"placeholder": "z. B. Max M. oder Sitzplatz 12"}
+                attrs={"placeholder": "optional, z. B. Max M. (leer = nur Nummer)"}
             ),
         }
 
 
+class CountStudentForm(forms.Form):
+    """Create a number of anonymous, numbered students at once (like VokaGo:
+    a class with X students, each identified only by number + token)."""
+
+    count = forms.IntegerField(
+        label="Anzahl Schüler/innen",
+        min_value=1,
+        max_value=60,
+        widget=forms.NumberInput(attrs={"placeholder": "z. B. 28"}),
+        help_text="Es werden anonyme Plätze (#001, #002 …) mit je einem Token erzeugt.",
+    )
+
+
 class BulkStudentForm(forms.Form):
-    """Add several students at once, one name per line."""
+    """Add several students at once by name, one per line."""
 
     names = forms.CharField(
         label="Namen (eine/r pro Zeile)",
         widget=forms.Textarea(attrs={"rows": 6, "placeholder": "Anna B.\nBen C.\nClara D."}),
-        help_text="Für jede Zeile wird ein Zugangscode erzeugt.",
+        help_text="Für jede Zeile wird ein Token erzeugt.",
     )
 
     def clean_names(self):
@@ -47,15 +60,16 @@ class StudentLoginForm(forms.Form):
         max_length=16,
         widget=forms.TextInput(
             attrs={
-                "placeholder": "z. B. K7QMB4RT",
-                "autocapitalize": "characters",
+                "placeholder": "z. B. hgk9ezgy3s8x",
+                "autocapitalize": "none",
                 "autocomplete": "off",
+                "spellcheck": "false",
                 "autofocus": "autofocus",
             }
         ),
     )
 
     def clean_access_code(self):
-        # Codes are stored uppercase without spaces; normalise input so
-        # pupils can type lower case or add stray spaces.
-        return self.cleaned_data["access_code"].strip().upper().replace(" ", "")
+        # Tokens are lowercase without spaces; normalise input so pupils can
+        # type upper case or add stray spaces.
+        return self.cleaned_data["access_code"].strip().lower().replace(" ", "")
