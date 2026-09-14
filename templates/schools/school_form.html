@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Schule anlegen{% endblock %}
+
+{% block content %}
+<div class="card card-narrow">
+    <h1>Schule anlegen</h1>
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form.as_p }}
+        <div class="form-actions">
+            <button type="submit" class="btn">Speichern</button>
+            <a class="btn btn-secondary" href="{% url 'schools:dashboard' %}">Abbrechen</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Schulplattform – Startseite{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <h1>Digitale Arbeitsblätter, einfach verteilt.</h1>
+    <p class="lead">
+        Lege als Lehrkraft deine Klassen an, gib jeder Schülerin und jedem
+        Schüler einen persönlichen Zugangscode und teile Aufgaben aus – von
+        der Schule oder von zu Hause, ganz ohne schuleigenes Netzwerk.
+    </p>
+    <div class="hero-actions">
+        {% if user.is_authenticated %}
+            <a class="btn" href="{% url 'schools:dashboard' %}">Zu meinen Klassen</a>
+        {% else %}
+            <a class="btn" href="{% url 'accounts:signup' %}">Lehrer-Konto erstellen</a>
+            <a class="btn btn-secondary" href="{% url 'schools:student_login' %}">Ich bin Schüler/in</a>
+        {% endif %}
+    </div>
+</section>
+
+<div class="grid" style="margin-top:32px;">
+    <div class="card">
+        <h2 style="margin-top:0;">Für Lehrkräfte</h2>
+        <ul class="feature-list">
+            <li>Schulen und Klassen anlegen</li>
+            <li>Zugangscodes für Schüler/innen erzeugen</li>
+            <li>Arbeitsblätter austeilen <span class="muted">(folgt)</span></li>
+            <li>Abgaben einsammeln <span class="muted">(folgt)</span></li>
+        </ul>
+    </div>
+    <div class="card">
+        <h2 style="margin-top:0;">Für Schüler/innen</h2>
+        <ul class="feature-list">
+            <li>Anmeldung nur mit Zugangscode</li>
+            <li>Keine E-Mail, kein Passwort nötig</li>
+            <li>Von überall erreichbar</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

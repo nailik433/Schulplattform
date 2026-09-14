@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}{{ school_class }}{% endblock %}
+
+{% block content %}
+<p class="muted"><a href="{% url 'schools:dashboard' %}">← Meine Klassen</a></p>
+
+<h1>{{ school_class.name }}</h1>
+<p class="subtitle">
+    {{ school_class.school.name }}{% if school_class.subject %} &middot; {{ school_class.subject }}{% endif %}
+</p>
+
+<div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
+    <div class="card">
+        <h2 style="margin-top:0;">Einzelne/n Schüler/in hinzufügen</h2>
+        <form method="post" action="{% url 'schools:student_add' school_class.pk %}" novalidate>
+            {% csrf_token %}
+            {{ student_form.as_p }}
+            <button type="submit" class="btn">Hinzufügen</button>
+        </form>
+    </div>
+    <div class="card">
+        <h2 style="margin-top:0;">Mehrere auf einmal</h2>
+        <form method="post" action="{% url 'schools:student_bulk_add' school_class.pk %}" novalidate>
+            {% csrf_token %}
+            {{ bulk_form.as_p }}
+            <button type="submit" class="btn">Alle hinzufügen</button>
+        </form>
+    </div>
+</div>
+
+<h2>Schüler/innen &amp; Zugangscodes</h2>
+{% if students %}
+    <div class="card" style="padding:0;overflow-x:auto;">
+        <table class="data">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Zugangscode</th>
+                    <th>Status</th>
+                    <th>Aktionen</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in students %}
+                    <tr>
+                        <td>{{ student.display_name }}</td>
+                        <td><span class="code">{{ student.access_code }}</span></td>
+                        <td>
+                            {% if student.is_active %}
+                                <span class="badge">aktiv</span>
+                            {% else %}
+                                <span class="badge inactive">deaktiviert</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="actions-cell">
+                                <form class="inline-form" method="post"
+                                      action="{% url 'schools:student_regenerate_code' school_class.pk student.pk %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-secondary btn-small">Neuer Code</button>
+                                </form>
+                                <form class="inline-form" method="post"
+                                      action="{% url 'schools:student_toggle_active' school_class.pk student.pk %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-secondary btn-small">
+                                        {% if student.is_active %}Deaktivieren{% else %}Aktivieren{% endif %}
+                                    </button>
+                                </form>
+                                <form class="inline-form" method="post"
+                                      action="{% url 'schools:student_delete' school_class.pk student.pk %}"
+                                      onsubmit="return confirm('„{{ student.display_name|escapejs }}“ wirklich entfernen?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger btn-small">Entfernen</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p class="muted">
+        Schüler/innen melden sich unter
+        <a href="{% url 'schools:student_login' %}">{{ request.scheme }}://{{ request.get_host }}{% url 'schools:student_login' %}</a>
+        mit ihrem Zugangscode an.
+    </p>
+{% else %}
+    <div class="card">
+        <p class="muted">Noch keine Schüler/innen in dieser Klasse. Füge oben welche hinzu.</p>
+    </div>
+{% endif %}
+{% endblock %}

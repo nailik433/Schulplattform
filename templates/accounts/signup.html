@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Lehrer-Konto erstellen{% endblock %}
+
+{% block content %}
+<div class="card card-narrow">
+    <h1>Lehrer-Konto erstellen</h1>
+    <p class="subtitle">Melde dich mit deiner E-Mail-Adresse an.</p>
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form.as_p }}
+        <div class="form-actions">
+            <button type="submit" class="btn">Konto erstellen</button>
+        </div>
+    </form>
+    <p class="muted" style="margin-top:16px;">
+        Schon registriert? <a href="{% url 'accounts:login' %}">Hier anmelden</a>
+    </p>
+</div>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Meine Klassen{% endblock %}
+
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+    <div>
+        <h1>Meine Klassen</h1>
+        <p class="subtitle">Deine Schulen und die zugehörigen Klassen.</p>
+    </div>
+    <a class="btn" href="{% url 'schools:school_create' %}">+ Schule anlegen</a>
+</div>
+
+{% if not schools %}
+    <div class="card">
+        <p>Du hast noch keine Schule angelegt.</p>
+        <a class="btn" href="{% url 'schools:school_create' %}">Erste Schule anlegen</a>
+    </div>
+{% else %}
+    {% for school in schools %}
+        <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+                <h2 style="margin:0;">{{ school.name }}</h2>
+                <a class="btn btn-secondary btn-small"
+                   href="{% url 'schools:class_create' school.pk %}">+ Klasse</a>
+            </div>
+            {% with class_list=school.classes.all %}
+                {% if class_list %}
+                    <div class="grid" style="margin-top:14px;">
+                        {% for c in class_list %}
+                            <a class="card" style="display:block;text-decoration:none;color:inherit;margin:0;"
+                               href="{{ c.get_absolute_url }}">
+                                <strong>{{ c.name }}</strong>
+                                {% if c.subject %}<div class="muted">{{ c.subject }}</div>{% endif %}
+                                <div class="muted" style="margin-top:6px;">
+                                    {{ c.active_student_count }} Schüler/innen
+                                </div>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="muted" style="margin-top:12px;">Noch keine Klassen in dieser Schule.</p>
+                {% endif %}
+            {% endwith %}
+        </div>
+    {% endfor %}
+{% endif %}
+{% endblock %}

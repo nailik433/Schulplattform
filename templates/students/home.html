@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Startseite{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1>Hallo {{ student.display_name }}! 👋</h1>
+    <p class="subtitle">
+        Du bist in der Klasse <strong>{{ student.school_class.name }}</strong>
+        {% if student.school_class.subject %}({{ student.school_class.subject }}){% endif %}
+        an der Schule {{ student.school_class.school.name }}.
+    </p>
+</div>
+
+<div class="card">
+    <h2 style="margin-top:0;">Deine Aufgaben</h2>
+    <p class="muted">
+        Hier erscheinen bald die Arbeitsblätter deiner Lehrkraft und du kannst
+        deine Abgaben hochladen. Dieser Bereich wird als Nächstes gebaut.
+    </p>
+</div>
+{% endblock %}

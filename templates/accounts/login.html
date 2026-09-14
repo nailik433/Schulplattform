@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Lehrer-Login{% endblock %}
+
+{% block content %}
+<div class="card card-narrow">
+    <h1>Lehrer-Login</h1>
+    <p class="subtitle">Melde dich mit E-Mail und Passwort an.</p>
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <ul class="errorlist">
+                {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+        {% endif %}
+        <p>
+            <label for="{{ form.username.id_for_label }}">E-Mail-Adresse</label>
+            <input type="email" name="username" id="{{ form.username.id_for_label }}"
+                   value="{{ form.username.value|default:'' }}" autocomplete="email" required autofocus>
+        </p>
+        <p>
+            <label for="{{ form.password.id_for_label }}">Passwort</label>
+            <input type="password" name="password" id="{{ form.password.id_for_label }}"
+                   autocomplete="current-password" required>
+        </p>
+        <div class="form-actions">
+            <button type="submit" class="btn">Anmelden</button>
+        </div>
+    </form>
+    <p class="muted" style="margin-top:16px;">
+        Noch kein Konto? <a href="{% url 'accounts:signup' %}">Jetzt registrieren</a>
+    </p>
+</div>
+{% endblock %}

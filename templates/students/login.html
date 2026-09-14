@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Schüler-Login{% endblock %}
+
+{% block content %}
+<div class="card card-narrow">
+    <h1>Anmelden mit Zugangscode</h1>
+    <p class="subtitle">Gib den Code ein, den du von deiner Lehrkraft bekommen hast.</p>
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form.as_p }}
+        <div class="form-actions">
+            <button type="submit" class="btn">Los geht's</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Schulplattform{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body>
+<header class="site-header">
+    <div class="container header-inner">
+        <a class="brand" href="{% url 'home' %}">📚 Schulplattform</a>
+        <nav class="nav">
+            {% if user.is_authenticated %}
+                <a href="{% url 'schools:dashboard' %}">Meine Klassen</a>
+                <span class="nav-user">{{ user.get_full_name|default:user.email }}</span>
+                <form action="{% url 'accounts:logout' %}" method="post" class="inline-form">
+                    {% csrf_token %}
+                    <button type="submit" class="link-button">Abmelden</button>
+                </form>
+            {% elif current_student %}
+                <span class="nav-user">{{ current_student.display_name }}</span>
+                <a href="{% url 'schools:student_logout' %}">Abmelden</a>
+            {% else %}
+                <a href="{% url 'accounts:login' %}">Lehrer-Login</a>
+                <a href="{% url 'schools:student_login' %}">Schüler-Login</a>
+            {% endif %}
+        </nav>
+    </div>
+</header>
+
+<main class="container">
+    {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+                <li class="message {{ message.tags }}">{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+</main>
+
+<footer class="site-footer">
+    <div class="container">
+        <p>Schulplattform &middot; digitale Arbeitsblätter &amp; Abgaben</p>
+    </div>
+</footer>
+</body>
+</html>
