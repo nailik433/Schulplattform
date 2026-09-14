@@ -39,7 +39,7 @@ class AssignmentForm(forms.ModelForm):
 
     class Meta:
         model = Assignment
-        fields = ["title", "description", "due_date"]
+        fields = ["title", "description", "due_date", "collect_submissions"]
         widgets = {
             "title": forms.TextInput(attrs={"placeholder": "z. B. Arbeitsblatt 3 – Schleifen"}),
             "description": forms.Textarea(attrs={"rows": 4}),
@@ -52,3 +52,9 @@ class AssignmentForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         # Let the browser's datetime-local control populate an existing value.
         self.fields["due_date"].input_formats = ["%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M:%S"]
+
+
+class SubmissionForm(forms.Form):
+    """A student uploads one or more solution files."""
+
+    files = MultipleFileField(label="Deine Datei(en)", required=True)

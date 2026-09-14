@@ -8,7 +8,7 @@ from django.urls import reverse
 
 from schools.models import ClassMembership, School, SchoolClass, Student
 
-from .models import Assignment, AssignmentFile
+from .models import Assignment, AssignmentFile, Submission, SubmissionFile
 
 User = get_user_model()
 MEDIA_ROOT = tempfile.mkdtemp()
@@ -148,3 +148,127 @@ class WorksheetTests(TestCase):
         self.client.post(reverse("worksheets:assignment_delete", args=[assignment.pk]))
         self.assertFalse(Assignment.objects.filter(pk=assignment.pk).exists())
         self.assertFalse(os.path.exists(path))
+
+    # --- Submissions -----------------------------------------------------
+
+    def _solution(self, name="loesung.pdf"):
+        return SimpleUploadedFile(name, b"meine loesung", content_type="application/pdf")
+
+    def _open_student_session(self, student=None):
+        student = student or self.student
+        self.client.get(reverse("schools:student_space", args=[student.access_code]))
+
+    def test_student_can_submit(self):
+        assignment = Assignment.objects.create(
+            school_class=self.school_class, title="AB", created_by=self.teacher
+        )
+        self._open_student_session()
+        response = self.client.post(
+            reverse("worksheets:submission_upload", args=[assignment.pk]),
+            {"files": self._solution()},
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        sub = Submission.objects.get(assignment=assignment, student=self.student)
+        self.assertEqual(sub.files.count(), 1)
+
+    def test_submission_blocked_when_collection_disabled(self):
+        assignment = Assignment.objects.create(
+            school_class=self.school_class,
+            title="Nur Material",
+            collect_submissions=False,
+        )
+        self._open_student_session()
+        response = self.client.post(
+            reverse("worksheets:submission_upload", args=[assignment.pk]),
+            {"files": self._solution()},
+        )
+        self.assertEqual(response.status_code, 404)
+        self.assertFalseSub(assignment)
+
+    def assertFalseSub(self, assignment):
+        self.assertFalse(Submission.objects.filter(assignment=assignment).exists())
+
+    def test_student_cannot_submit_to_other_class(self):
+        other_class = make_class(make_teacher("t3@example.com"), name="9c")
+        assignment = Assignment.objects.create(
+            school_class=other_class, title="Fremd", created_by=self.teacher
+        )
+        self._open_student_session()  # session as self.student (class 8a)
+        response = self.client.post(
+            reverse("worksheets:submission_upload", args=[assignment.pk]),
+            {"files": self._solution()},
+        )
+        self.assertEqual(response.status_code, 404)
+        self.assertFalseSub(assignment)
+
+    def _submit_as(self, assignment, student):
+        self._open_student_session(student)
+        self.client.post(
+            reverse("worksheets:submission_upload", args=[assignment.pk]),
+            {"files": self._solution()},
+        )
+        return SubmissionFile.objects.get(submission__assignment=assignment,
+                                          submission__student=student)
+
+    def test_teacher_sees_and_downloads_submission(self):
+        assignment = Assignment.objects.create(
+            school_class=self.school_class, title="AB", created_by=self.teacher
+        )
+        sf = self._submit_as(assignment, self.student)
+        self.client.force_login(self.teacher)
+        detail = self.client.get(assignment.get_absolute_url())
+        self.assertContains(detail, "Anna")
+        self.assertContains(detail, "loesung.pdf")
+        dl = self.client.get(
+            reverse("worksheets:submission_file_download", args=[sf.pk])
+        )
+        self.assertEqual(dl.status_code, 200)
+
+    def test_student_downloads_own_but_not_others_submission(self):
+        assignment = Assignment.objects.create(
+            school_class=self.school_class, title="AB", created_by=self.teacher
+        )
+        other = Student.objects.create(school_class=self.school_class, display_name="Ben")
+        sf_anna = self._submit_as(assignment, self.student)
+        sf_ben = self._submit_as(assignment, other)
+
+        # Ben's session is active now (last _submit_as). Ben may fetch his own.
+        self.assertEqual(
+            self.client.get(
+                reverse("worksheets:submission_file_download", args=[sf_ben.pk])
+            ).status_code,
+            200,
+        )
+        # ... but not Anna's.
+        self.assertEqual(
+            self.client.get(
+                reverse("worksheets:submission_file_download", args=[sf_anna.pk])
+            ).status_code,
+            404,
+        )
+
+    def test_student_can_delete_own_submission_file(self):
+        assignment = Assignment.objects.create(
+            school_class=self.school_class, title="AB", created_by=self.teacher
+        )
+        sf = self._submit_as(assignment, self.student)
+        response = self.client.post(
+            reverse("worksheets:submission_file_delete", args=[sf.pk]), follow=True
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(SubmissionFile.objects.filter(pk=sf.pk).exists())
+
+    def test_late_submission_flagged(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        assignment = Assignment.objects.create(
+            school_class=self.school_class,
+            title="AB",
+            due_date=timezone.now() - timedelta(days=1),
+        )
+        self._submit_as(assignment, self.student)
+        sub = Submission.objects.get(assignment=assignment, student=self.student)
+        self.assertTrue(sub.is_late)

@@ -7,8 +7,8 @@ from django.views.decorators.http import require_POST
 from schools.models import ClassMembership, SchoolClass
 from schools.views import get_current_student
 
-from .forms import AssignmentForm
-from .models import Assignment, AssignmentFile
+from .forms import AssignmentForm, SubmissionForm
+from .models import Assignment, AssignmentFile, Submission, SubmissionFile
 
 
 # --------------------------------------------------------------------------
@@ -79,10 +79,30 @@ def assignment_create(request, class_pk):
 @login_required
 def assignment_detail(request, pk):
     assignment = _teacher_assignment_or_404(request.user, pk)
+
+    # Build the submission overview: every active student and their submission.
+    submissions = {
+        s.student_id: s
+        for s in assignment.submissions.select_related("student").prefetch_related(
+            "files"
+        )
+    }
+    roster = []
+    for student in assignment.school_class.students.filter(is_active=True):
+        roster.append({"student": student, "submission": submissions.get(student.id)})
+
+    submitted_count = sum(1 for row in roster if row["submission"])
+
     return render(
         request,
         "worksheets/assignment_detail.html",
-        {"assignment": assignment, "files": assignment.files.all()},
+        {
+            "assignment": assignment,
+            "files": assignment.files.all(),
+            "roster": roster,
+            "submitted_count": submitted_count,
+            "roster_count": len(roster),
+        },
     )
 
 
@@ -150,3 +170,88 @@ def file_download(request, file_pk):
     except FileNotFoundError:
         raise Http404
     return FileResponse(handle, as_attachment=True, filename=af.original_name)
+
+
+# --------------------------------------------------------------------------
+# Submissions (student uploads)
+# --------------------------------------------------------------------------
+
+def _redirect_student_home(student):
+    return redirect("schools:student_space", token=student.access_code)
+
+
+@require_POST
+def submission_upload(request, assignment_pk):
+    student = get_current_student(request)
+    if student is None:
+        return redirect("schools:student_login")
+
+    assignment = get_object_or_404(
+        Assignment.objects.select_related("school_class"), pk=assignment_pk
+    )
+    # A student may only submit to assignments of their own class that collect
+    # submissions.
+    if (
+        assignment.school_class_id != student.school_class_id
+        or not assignment.collect_submissions
+    ):
+        raise Http404
+
+    form = SubmissionForm(request.POST, request.FILES)
+    if form.is_valid():
+        submission, _ = Submission.objects.get_or_create(
+            assignment=assignment, student=student
+        )
+        for upload in form.cleaned_data["files"]:
+            if upload:
+                SubmissionFile.objects.create(submission=submission, file=upload)
+        # Touch updated_at so the "late" check reflects the latest upload.
+        submission.save(update_fields=["updated_at"])
+        messages.success(request, "Deine Abgabe wurde hochgeladen. 👍")
+    else:
+        messages.error(
+            request, "Upload fehlgeschlagen (Datei zu groß oder leer?)."
+        )
+    return _redirect_student_home(student)
+
+
+@require_POST
+def submission_file_delete(request, file_pk):
+    student = get_current_student(request)
+    if student is None:
+        return redirect("schools:student_login")
+
+    sf = get_object_or_404(
+        SubmissionFile.objects.select_related("submission"),
+        pk=file_pk,
+        submission__student=student,
+    )
+    sf.file.delete(save=False)
+    sf.delete()
+    messages.success(request, "Datei aus deiner Abgabe entfernt.")
+    return _redirect_student_home(student)
+
+
+def submission_file_download(request, file_pk):
+    sf = get_object_or_404(
+        SubmissionFile.objects.select_related(
+            "submission__assignment__school_class", "submission__student"
+        ),
+        pk=file_pk,
+    )
+    school_class = sf.submission.assignment.school_class
+    role = _may_access_class(request, school_class)
+    allowed = False
+    if role == "teacher":
+        allowed = True
+    elif role == "student":
+        student = get_current_student(request)
+        allowed = student and student.id == sf.submission.student_id
+    if not allowed:
+        raise Http404
+
+    try:
+        handle = sf.file.open("rb")
+    except FileNotFoundError:
+        raise Http404
+    return FileResponse(handle, as_attachment=True, filename=sf.original_name)

@@ -30,6 +30,11 @@ class Assignment(models.Model):
     title = models.CharField("Titel", max_length=200)
     description = models.TextField("Beschreibung / Aufgabe", blank=True)
     due_date = models.DateTimeField("Abgabe bis", null=True, blank=True)
+    collect_submissions = models.BooleanField(
+        "Abgaben einsammeln",
+        default=True,
+        help_text="Wenn aktiv, können Schüler/innen eine Lösung hochladen.",
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -81,3 +86,81 @@ class AssignmentFile(models.Model):
 
     def get_download_url(self):
         return reverse("worksheets:file_download", args=[self.pk])
+
+
+def submission_upload_path(instance, filename):
+    """Store a submission file under an unguessable per-student path."""
+    submission = instance.submission
+    return (
+        f"submissions/class_{submission.assignment.school_class_id}"
+        f"/assignment_{submission.assignment_id}"
+        f"/student_{submission.student_id}/{uuid.uuid4().hex}/{filename}"
+    )
+
+
+class Submission(models.Model):
+    """A student's submission for one assignment (one per student & assignment)."""
+
+    assignment = models.ForeignKey(
+        Assignment,
+        on_delete=models.CASCADE,
+        related_name="submissions",
+    )
+    student = models.ForeignKey(
+        "schools.Student",
+        on_delete=models.CASCADE,
+        related_name="submissions",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Abgabe"
+        verbose_name_plural = "Abgaben"
+        ordering = ["student__number"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["assignment", "student"],
+                name="unique_submission_per_student",
+            )
+        ]
+
+    def __str__(self):
+        return f"Abgabe {self.student} – {self.assignment}"
+
+    @property
+    def is_late(self):
+        due = self.assignment.due_date
+        return bool(due and self.updated_at and self.updated_at > due)
+
+
+class SubmissionFile(models.Model):
+    """A file that belongs to a student's submission."""
+
+    submission = models.ForeignKey(
+        Submission,
+        on_delete=models.CASCADE,
+        related_name="files",
+    )
+    file = models.FileField(upload_to=submission_upload_path)
+    original_name = models.CharField(max_length=255)
+    size = models.PositiveIntegerField(default=0)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Abgabe-Datei"
+        verbose_name_plural = "Abgabe-Dateien"
+        ordering = ["uploaded_at"]
+
+    def __str__(self):
+        return self.original_name
+
+    def save(self, *args, **kwargs):
+        if self.file and not self.original_name:
+            self.original_name = self.file.name.rsplit("/", 1)[-1]
+        if self.file and not self.size:
+            self.size = self.file.size
+        super().save(*args, **kwargs)
+
+    def get_download_url(self):
+        return reverse("worksheets:submission_file_download", args=[self.pk])

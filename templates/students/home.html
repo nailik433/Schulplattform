@@ -13,8 +13,9 @@
 </div>
 
 <h2>Deine Arbeitsblätter</h2>
-{% if assignments %}
-    {% for assignment in assignments %}
+{% if rows %}
+    {% for row in rows %}
+        {% with assignment=row.assignment submission=row.submission %}
         <div class="card">
             <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;">
                 <strong>{{ assignment.title }}</strong>
@@ -25,9 +26,11 @@
             {% if assignment.description %}
                 <p style="white-space:pre-line;margin:10px 0 0;">{{ assignment.description }}</p>
             {% endif %}
+
             {% with files=assignment.files.all %}
                 {% if files %}
-                    <ul style="margin:12px 0 0;padding-left:18px;">
+                    <p style="margin:12px 0 4px;"><strong>Material:</strong></p>
+                    <ul style="margin:0;padding-left:18px;">
                         {% for file in files %}
                             <li>
                                 <a href="{% url 'worksheets:file_download' file.pk %}">
@@ -38,7 +41,47 @@
                     </ul>
                 {% endif %}
             {% endwith %}
+
+            {% if assignment.collect_submissions %}
+                <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px;">
+                    <p style="margin:0 0 8px;"><strong>Deine Abgabe</strong>
+                        {% if submission %}
+                            {% if submission.is_late %}
+                                <span class="badge inactive">verspätet abgegeben</span>
+                            {% else %}
+                                <span class="badge">abgegeben am {{ submission.updated_at|date:"d.m.Y H:i" }}</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="badge inactive">noch nichts abgegeben</span>
+                        {% endif %}
+                    </p>
+
+                    {% if submission and submission.files.all %}
+                        <ul style="margin:0 0 10px;padding-left:18px;">
+                            {% for file in submission.files.all %}
+                                <li>
+                                    <a href="{% url 'worksheets:submission_file_download' file.pk %}">{{ file.original_name }}</a>
+                                    <form class="inline-form" method="post"
+                                          action="{% url 'worksheets:submission_file_delete' file.pk %}"
+                                          onsubmit="return confirm('Diese Datei aus deiner Abgabe entfernen?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="link-button">entfernen</button>
+                                    </form>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+
+                    <form method="post" enctype="multipart/form-data"
+                          action="{% url 'worksheets:submission_upload' assignment.pk %}">
+                        {% csrf_token %}
+                        <input type="file" name="files" multiple required>
+                        <button type="submit" class="btn btn-small" style="margin-top:8px;">Hochladen</button>
+                    </form>
+                </div>
+            {% endif %}
         </div>
+        {% endwith %}
     {% endfor %}
 {% else %}
     <div class="card">

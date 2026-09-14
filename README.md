@@ -59,14 +59,25 @@ persönlichen, zufälligen **Zugangscode**, den die Lehrkraft erzeugt.
   ausgeliefert, sondern nur über eine zugriffsgeprüfte View – erreichbar für
   die Lehrkräfte der Klasse und deren Schüler/innen, sonst nicht.
 
+**Abgaben einsammeln**
+
+- Pro Arbeitsblatt lässt sich das Einsammeln von **Abgaben** aktivieren
+  (Standard) oder abschalten (reines Material).
+- **Schüler/innen** laden ihre Lösung(en) direkt auf ihrer Startseite hoch,
+  sehen ihre eigenen Dateien und können sie wieder entfernen. Abgaben nach der
+  Frist werden als **verspätet** markiert.
+- **Lehrkräfte** sehen je Arbeitsblatt eine **Abgabe-Übersicht** (wer hat
+  abgegeben, wann, verspätet?) und laden die abgegebenen Dateien herunter.
+- **Vertraulichkeit**: Abgabe-Dateien sind nur für die Lehrkräfte der Klasse
+  und die jeweils abgebende Person zugänglich – kein/e Schüler/in sieht die
+  Abgaben anderer.
+
 **Erste Schritte als Betreiber:** nach `createsuperuser` im Admin (`/admin/`)
 zuerst eine oder mehrere **Schulen** anlegen, dann Lehrkräfte per **Einladung**
 einladen oder eingegangene **Zugangsanfragen** genehmigen.
 
 ## Nächste Ausbaustufen (geplant)
 
-- **Stufe 3** – Abgaben einsammeln (Datei-Upload durch Schüler/innen),
-  Abgabe-Übersicht und Fristen.
 - **Stufe 4** – Klasse an Kolleg/innen weiterleiten (Freigabe-UI auf Basis des
   bereits vorhandenen Rollenmodells).
 

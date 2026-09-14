@@ -338,13 +338,20 @@ def student_space(request, token):
 
     _reset_attempts(request)
     request.session[STUDENT_SESSION_KEY] = student.pk
-    assignments = (
-        student.school_class.assignments.all().prefetch_related("files")
-    )
+
+    assignments = student.school_class.assignments.all().prefetch_related("files")
+    # Map assignment -> this student's submission (if any) for the template.
+    my_subs = {
+        s.assignment_id: s
+        for s in student.submissions.prefetch_related("files").all()
+    }
+    rows = [
+        {"assignment": a, "submission": my_subs.get(a.id)} for a in assignments
+    ]
     return render(
         request,
         "students/home.html",
-        {"student": student, "assignments": assignments},
+        {"student": student, "rows": rows},
     )
 
 

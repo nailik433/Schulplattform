@@ -23,4 +23,20 @@ urlpatterns = [
     ),
     path("datei/<int:file_pk>/", views.file_download, name="file_download"),
     path("datei/<int:file_pk>/loeschen/", views.file_delete, name="file_delete"),
+    # Submissions
+    path(
+        "arbeitsblatt/<int:assignment_pk>/abgeben/",
+        views.submission_upload,
+        name="submission_upload",
+    ),
+    path(
+        "abgabe-datei/<int:file_pk>/",
+        views.submission_file_download,
+        name="submission_file_download",
+    ),
+    path(
+        "abgabe-datei/<int:file_pk>/loeschen/",
+        views.submission_file_delete,
+        name="submission_file_delete",
+    ),
 ]

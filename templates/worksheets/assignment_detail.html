@@ -46,6 +46,54 @@
     {% endif %}
 </div>
 
+{% if assignment.collect_submissions %}
+    <h2>Abgaben <span class="muted" style="font-weight:400;">({{ submitted_count }}/{{ roster_count }})</span></h2>
+    <div class="card" style="padding:0;overflow-x:auto;">
+        <table class="data">
+            <thead>
+                <tr>
+                    <th>Nr.</th>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Dateien</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in roster %}
+                    <tr>
+                        <td>{{ row.student.number_label }}</td>
+                        <td>{{ row.student.display_name|default:"—" }}</td>
+                        <td>
+                            {% if row.submission %}
+                                {% if row.submission.is_late %}
+                                    <span class="badge inactive">verspätet · {{ row.submission.updated_at|date:"d.m.Y H:i" }}</span>
+                                {% else %}
+                                    <span class="badge">abgegeben · {{ row.submission.updated_at|date:"d.m.Y H:i" }}</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="muted">offen</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if row.submission %}
+                                {% for file in row.submission.files.all %}
+                                    <a href="{% url 'worksheets:submission_file_download' file.pk %}">⬇️ {{ file.original_name }}</a>{% if not forloop.last %}<br>{% endif %}
+                                {% empty %}
+                                    <span class="muted">—</span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="muted">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <p class="muted">Für dieses Arbeitsblatt werden keine Abgaben eingesammelt.</p>
+{% endif %}
+
 <p class="muted">
     Schüler/innen sehen dieses Arbeitsblatt nach dem Login mit ihrem Token auf ihrer Startseite.
 </p>
