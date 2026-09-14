@@ -124,6 +124,103 @@ class ClassOwnershipTests(TestCase):
         )
 
 
+class ClassSharingTests(TestCase):
+    def setUp(self):
+        self.school = School.objects.create(name="Gemeinsame Schule")
+        self.owner = make_teacher("owner@share.de", school=self.school)
+        self.colleague = make_teacher("kollege@share.de", school=self.school)
+        self.school_class = make_class(self.owner)  # owner's class in self.school
+
+    def _share_url(self):
+        return reverse("schools:class_share_add", args=[self.school_class.pk])
+
+    def test_owner_can_share_with_colleague(self):
+        self.client.force_login(self.owner)
+        self.client.post(self._share_url(), {"email": "KOLLEGE@share.de"})
+        self.assertTrue(
+            ClassMembership.objects.filter(
+                school_class=self.school_class,
+                teacher=self.colleague,
+                role=ClassMembership.Role.COLLABORATOR,
+            ).exists()
+        )
+
+    def test_colleague_then_sees_and_opens_class(self):
+        ClassMembership.objects.create(
+            school_class=self.school_class,
+            teacher=self.colleague,
+            role=ClassMembership.Role.COLLABORATOR,
+        )
+        self.client.force_login(self.colleague)
+        # Dashboard lists it, class detail opens.
+        self.assertContains(self.client.get(reverse("schools:dashboard")), self.school_class.name)
+        self.assertEqual(
+            self.client.get(self.school_class.get_absolute_url()).status_code, 200
+        )
+
+    def test_sharing_unknown_email_does_nothing(self):
+        self.client.force_login(self.owner)
+        self.client.post(self._share_url(), {"email": "niemand@share.de"})
+        self.assertEqual(self.school_class.memberships.count(), 1)  # only owner
+
+    def test_cannot_share_across_schools(self):
+        outsider = make_teacher("extern@other.de", school=School.objects.create(name="Andere"))
+        self.client.force_login(self.owner)
+        self.client.post(self._share_url(), {"email": outsider.email})
+        self.assertFalse(
+            ClassMembership.objects.filter(
+                school_class=self.school_class, teacher=outsider
+            ).exists()
+        )
+
+    def test_collaborator_cannot_manage_sharing(self):
+        ClassMembership.objects.create(
+            school_class=self.school_class,
+            teacher=self.colleague,
+            role=ClassMembership.Role.COLLABORATOR,
+        )
+        third = make_teacher("dritte@share.de", school=self.school)
+        self.client.force_login(self.colleague)
+        response = self.client.post(self._share_url(), {"email": third.email})
+        self.assertEqual(response.status_code, 404)  # not an owner
+        self.assertFalse(
+            ClassMembership.objects.filter(
+                school_class=self.school_class, teacher=third
+            ).exists()
+        )
+
+    def test_owner_can_remove_collaborator(self):
+        ClassMembership.objects.create(
+            school_class=self.school_class,
+            teacher=self.colleague,
+            role=ClassMembership.Role.COLLABORATOR,
+        )
+        self.client.force_login(self.owner)
+        self.client.post(
+            reverse(
+                "schools:class_share_remove",
+                args=[self.school_class.pk, self.colleague.pk],
+            )
+        )
+        self.assertFalse(
+            ClassMembership.objects.filter(
+                school_class=self.school_class, teacher=self.colleague
+            ).exists()
+        )
+
+    def test_collaborator_does_not_see_owners_other_class(self):
+        other_class = make_class(self.owner, name="andere")
+        ClassMembership.objects.create(
+            school_class=self.school_class,
+            teacher=self.colleague,
+            role=ClassMembership.Role.COLLABORATOR,
+        )
+        self.client.force_login(self.colleague)
+        self.assertEqual(
+            self.client.get(other_class.get_absolute_url()).status_code, 404
+        )
+
+
 class StudentNumberTests(TestCase):
     def test_students_get_sequential_numbers_per_class(self):
         teacher = make_teacher("num@example.com")

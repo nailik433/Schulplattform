@@ -43,10 +43,18 @@ persönlichen, zufälligen **Zugangscode**, den die Lehrkraft erzeugt.
   handschriftliche Namenszuordnung. Die QR-Codes werden **lokal auf dem
   Server** erzeugt – die Tokens verlassen den Server nicht.
 - **Zugriffsschutz**: Eine Lehrkraft sieht ausschließlich ihre eigenen Klassen.
-  Das Datenmodell ist bereits auf das spätere Teilen mit Kolleg/innen
-  vorbereitet (Rollen `Inhaber` / `Kollege/Kollegin` pro Klasse), sodass
-  geteilte Kolleg/innen nur auf die freigegebene Klasse zugreifen – nie auf
-  die übrigen Kurse.
+
+**Klassen mit Kolleg/innen teilen**
+
+- Der/die **Inhaber/in** einer Klasse kann sie an **Kolleg/innen** freigeben
+  (per E-Mail; müssen registriert und an derselben Schule sein) und die
+  Freigabe wieder entziehen.
+- Freigegebene Kolleg/innen sehen die Klasse unter „Mit mir geteilte Klassen"
+  und können voll mitarbeiten (Schüler/innen, Arbeitsblätter, Abgaben) –
+  aber **nur diese Klasse**, nie die übrigen Kurse der Inhaberin/des Inhabers,
+  und sie können die Freigabe selbst nicht verwalten. Umgesetzt über die
+  Rollen `Inhaber` / `Kollege/Kollegin` pro Klasse; alle Lehrer-Aktionen
+  prüfen die Mitgliedschaft.
 
 **Arbeitsblätter austeilen**
 
@@ -76,10 +84,12 @@ persönlichen, zufälligen **Zugangscode**, den die Lehrkraft erzeugt.
 zuerst eine oder mehrere **Schulen** anlegen, dann Lehrkräfte per **Einladung**
 einladen oder eingegangene **Zugangsanfragen** genehmigen.
 
-## Nächste Ausbaustufen (geplant)
+## Vor dem Echtbetrieb empfohlen
 
-- **Stufe 4** – Klasse an Kolleg/innen weiterleiten (Freigabe-UI auf Basis des
-  bereits vorhandenen Rollenmodells).
+- Passwort-Zurücksetzen für Lehrkräfte (per E-Mail).
+- Impressum & Datenschutzerklärung, Löschkonzept (z. B. Abgaben am
+  Schuljahresende automatisch löschen).
+- Regelmäßige Backups (Datenbank + Upload-Ordner).
 
 ---
 

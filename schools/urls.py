@@ -10,6 +10,12 @@ urlpatterns = [
     path("klasse/neu/", views.class_create, name="class_create"),
     path("klasse/<int:pk>/", views.class_detail, name="class_detail"),
     path("klasse/<int:pk>/qr/", views.class_qr_document, name="class_qr_document"),
+    path("klasse/<int:pk>/freigabe/", views.class_share_add, name="class_share_add"),
+    path(
+        "klasse/<int:pk>/freigabe/<int:teacher_pk>/entfernen/",
+        views.class_share_remove,
+        name="class_share_remove",
+    ),
     path("klasse/<int:pk>/schueler/hinzufuegen/", views.student_add, name="student_add"),
     path(
         "klasse/<int:pk>/schueler/anzahl/",

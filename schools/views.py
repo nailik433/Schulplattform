@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.db import transaction
@@ -9,6 +10,7 @@ from .forms import (
     BulkStudentForm,
     CountStudentForm,
     SchoolClassForm,
+    ShareClassForm,
     StudentForm,
     StudentLoginForm,
 )
@@ -35,6 +37,23 @@ def _teacher_classes(user):
 def _get_teacher_class(user, pk):
     """Fetch a class the teacher is a member of, or 404."""
     return get_object_or_404(_teacher_classes(user), pk=pk)
+
+
+def _get_owned_class(user, pk):
+    """Fetch a class the teacher OWNS (may manage sharing), or 404."""
+    return get_object_or_404(
+        SchoolClass.objects.filter(
+            memberships__teacher=user,
+            memberships__role=ClassMembership.Role.OWNER,
+        ),
+        pk=pk,
+    )
+
+
+def _is_owner(user, school_class):
+    return school_class.memberships.filter(
+        teacher=user, role=ClassMembership.Role.OWNER
+    ).exists()
 
 
 def _client_ip(request):
@@ -148,14 +167,83 @@ def class_create(request):
 def class_detail(request, pk):
     school_class = _get_teacher_class(request.user, pk)
     students = school_class.students.all()
+    memberships = school_class.memberships.select_related("teacher")
+    owner_membership = next(
+        (m for m in memberships if m.role == ClassMembership.Role.OWNER), None
+    )
+    collaborators = [
+        m for m in memberships if m.role == ClassMembership.Role.COLLABORATOR
+    ]
     context = {
         "school_class": school_class,
         "students": students,
         "student_form": StudentForm(),
         "count_form": CountStudentForm(),
         "bulk_form": BulkStudentForm(),
+        "is_owner": _is_owner(request.user, school_class),
+        "owner": owner_membership.teacher if owner_membership else None,
+        "collaborators": collaborators,
+        "share_form": ShareClassForm(),
     }
     return render(request, "schools/class_detail.html", context)
+
+
+@login_required
+@require_POST
+def class_share_add(request, pk):
+    school_class = _get_owned_class(request.user, pk)
+    form = ShareClassForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, "Bitte eine gültige E-Mail-Adresse eingeben.")
+        return redirect(school_class.get_absolute_url())
+
+    email = form.cleaned_data["email"]
+    User = get_user_model()
+    colleague = User.objects.filter(email__iexact=email).first()
+
+    if colleague is None:
+        messages.error(
+            request,
+            "Es gibt kein Konto mit dieser E-Mail. Die Person muss sich zuerst "
+            "auf der Plattform registrieren.",
+        )
+    elif colleague == request.user:
+        messages.error(request, "Du bist bereits Inhaber/in dieser Klasse.")
+    elif colleague.school_id != school_class.school_id:
+        messages.error(
+            request, "Diese Person gehört zu einer anderen Schule."
+        )
+    elif ClassMembership.objects.filter(
+        school_class=school_class, teacher=colleague
+    ).exists():
+        messages.error(request, "Diese Person hat bereits Zugriff auf die Klasse.")
+    else:
+        ClassMembership.objects.create(
+            school_class=school_class,
+            teacher=colleague,
+            role=ClassMembership.Role.COLLABORATOR,
+        )
+        messages.success(
+            request,
+            f"Klasse für {colleague.get_full_name() or colleague.email} freigegeben.",
+        )
+    return redirect(school_class.get_absolute_url())
+
+
+@login_required
+@require_POST
+def class_share_remove(request, pk, teacher_pk):
+    school_class = _get_owned_class(request.user, pk)
+    membership = get_object_or_404(
+        ClassMembership,
+        school_class=school_class,
+        teacher_id=teacher_pk,
+        role=ClassMembership.Role.COLLABORATOR,
+    )
+    name = membership.teacher.get_full_name() or membership.teacher.email
+    membership.delete()
+    messages.success(request, f"Freigabe für {name} wurde entfernt.")
+    return redirect(school_class.get_absolute_url())
 
 
 @login_required

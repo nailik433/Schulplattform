@@ -54,6 +54,18 @@ class BulkStudentForm(forms.Form):
         return names
 
 
+class ShareClassForm(forms.Form):
+    """Share a class with a colleague, identified by their email address."""
+
+    email = forms.EmailField(
+        label="E-Mail der Kollegin / des Kollegen",
+        widget=forms.EmailInput(attrs={"placeholder": "kolleg.in@schule.de"}),
+    )
+
+    def clean_email(self):
+        return self.cleaned_data["email"].strip().lower()
+
+
 class StudentLoginForm(forms.Form):
     access_code = forms.CharField(
         label="Zugangscode",
