@@ -1,18 +1,16 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from .forms import (
     BulkStudentForm,
     SchoolClassForm,
-    SchoolForm,
     StudentForm,
     StudentLoginForm,
 )
-from .models import ClassMembership, School, SchoolClass, Student
+from .models import ClassMembership, SchoolClass, Student
 
 STUDENT_SESSION_KEY = "student_id"
 
@@ -57,46 +55,28 @@ def home(request):
 
 @login_required
 def dashboard(request):
-    schools = (
-        School.objects.filter(classes__memberships__teacher=request.user)
-        .distinct()
-        .prefetch_related("classes")
-    )
     my_classes = _teacher_classes(request.user).select_related("school")
+    # Classes the teacher owns in their own school vs. classes shared with them.
+    owned = [c for c in my_classes if c.school_id == request.user.school_id]
+    shared = [c for c in my_classes if c.school_id != request.user.school_id]
     context = {
-        "schools": schools,
-        "classes": my_classes,
+        "school": request.user.school,
+        "owned_classes": owned,
+        "shared_classes": shared,
     }
     return render(request, "schools/dashboard.html", context)
 
 
 @login_required
-def school_create(request):
-    if request.method == "POST":
-        form = SchoolForm(request.POST)
-        if form.is_valid():
-            school = form.save(commit=False)
-            school.created_by = request.user
-            school.save()
-            messages.success(request, f"Schule „{school.name}“ wurde angelegt.")
-            return redirect("schools:dashboard")
-    else:
-        form = SchoolForm()
-    return render(
-        request,
-        "schools/school_form.html",
-        {"form": form},
-    )
-
-
-@login_required
-def class_create(request, school_pk):
-    # Only schools the teacher has access to (created, or has a class in).
-    school = get_object_or_404(School, pk=school_pk)
-    if school.created_by_id != request.user.id and not _teacher_classes(
-        request.user
-    ).filter(school=school).exists():
-        raise Http404
+def class_create(request):
+    school = request.user.school
+    if school is None:
+        messages.error(
+            request,
+            "Dir ist noch keine Schule zugeordnet. Bitte wende dich an die "
+            "Administration der Plattform.",
+        )
+        return redirect("schools:dashboard")
 
     if request.method == "POST":
         form = SchoolClassForm(request.POST)

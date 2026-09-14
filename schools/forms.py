@@ -1,15 +1,6 @@
 from django import forms
 
-from .models import School, SchoolClass, Student
-
-
-class SchoolForm(forms.ModelForm):
-    class Meta:
-        model = School
-        fields = ["name"]
-        widgets = {
-            "name": forms.TextInput(attrs={"placeholder": "z. B. Gymnasium am Stadtpark"}),
-        }
+from .models import SchoolClass, Student
 
 
 class SchoolClassForm(forms.ModelForm):

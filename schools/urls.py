@@ -7,8 +7,7 @@ app_name = "schools"
 urlpatterns = [
     # Teacher area
     path("uebersicht/", views.dashboard, name="dashboard"),
-    path("schule/neu/", views.school_create, name="school_create"),
-    path("schule/<int:school_pk>/klasse/neu/", views.class_create, name="class_create"),
+    path("klasse/neu/", views.class_create, name="class_create"),
     path("klasse/<int:pk>/", views.class_detail, name="class_detail"),
     path("klasse/<int:pk>/schueler/hinzufuegen/", views.student_add, name="student_add"),
     path(

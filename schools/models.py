@@ -20,9 +20,13 @@ class School(models.Model):
     """A school. Created by a teacher; classes live under it."""
 
     name = models.CharField("Name der Schule", max_length=200)
+    # Set to the platform operator who created the school; kept for the record
+    # only, so it may be empty (e.g. schools created via a data import).
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="schools_created",
     )
     created_at = models.DateTimeField(auto_now_add=True)

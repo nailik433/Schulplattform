@@ -78,12 +78,11 @@ das reine Webhosting-Paket), eine Domain, deren DNS-A-Eintrag auf die Server-IP
 zeigt.
 
 ```bash
-# 1. Repo auf den Server holen
-git clone <REPO-URL> schulplattform && cd schulplattform
+# 1. Code auf den Server bringen (zwei Möglichkeiten, siehe unten)
 
 # 2. Konfiguration anlegen und ausfüllen
 cp .env.example .env
-nano .env      # SECRET_KEY, Passwörter, DOMAIN, LETSENCRYPT_EMAIL ...
+nano .env      # SECRET_KEY, Passwörter, DOMAIN, LETSENCRYPT_EMAIL, SITE_URL ...
 
 # 3. Starten (baut Images, migriert DB, sammelt static, startet alles)
 docker compose up -d --build
@@ -92,7 +91,37 @@ docker compose up -d --build
 docker compose exec web python manage.py createsuperuser
 ```
 
-Danach ist die Plattform unter `https://<DOMAIN>` erreichbar.
+Danach ist die Plattform unter `https://<DOMAIN>` erreichbar. Melde dich unter
+`https://<DOMAIN>/admin/` an und lege dort zuerst die **Schulen** an; danach
+kannst du Lehrkräfte per Einladung einladen oder Zugangsanfragen genehmigen.
+
+### Code auf den Server bringen – mit oder ohne GitHub
+
+Das Setup braucht nur die Projektdateien, **kein GitHub**. Zwei Wege:
+
+**Weg 1 – ohne GitHub (Archiv hochladen).** Auf deinem PC ein Archiv des
+Projekts erzeugen und per SCP auf den Server kopieren:
+
+```bash
+# auf deinem Rechner, im Projektordner:
+tar --exclude='.git' --exclude='.venv' --exclude='db.sqlite3' \
+    --exclude='staticfiles' --exclude='media' -czf schulplattform.tar.gz .
+scp schulplattform.tar.gz benutzer@SERVER-IP:~/
+
+# auf dem Server:
+mkdir -p schulplattform && tar -xzf schulplattform.tar.gz -C schulplattform
+cd schulplattform
+```
+
+Für spätere Updates einfach ein neues Archiv hochladen, entpacken und erneut
+`docker compose up -d --build` ausführen.
+
+**Weg 2 – mit git** (auch von einem eigenen/privaten Git-Server möglich, nicht
+nur GitHub):
+
+```bash
+git clone <REPO-URL> schulplattform && cd schulplattform
+```
 
 **Updates einspielen:**
 ```bash

@@ -10,10 +10,26 @@ persönlichen, zufälligen **Zugangscode**, den die Lehrkraft erzeugt.
 
 ---
 
-## Was schon funktioniert (MVP – Stufe 1)
+## Was schon funktioniert
 
-- **Lehrer-Konto**: Registrierung und Login per E-Mail-Adresse.
-- **Schulen anlegen** und darunter **Klassen** (z. B. „5a – Informatik“).
+**Zugang & Verwaltung**
+
+- **Schulen** legt ausschließlich der/die Plattform-Betreiber/in im
+  **Admin-Bereich** (`/admin/`) an. Lehrkräfte können keine Schulen erstellen.
+- **Lehrkräfte registrieren sich nicht frei**, sondern gelangen auf zwei Wegen
+  zu einem Konto – jeweils fest einer Schule zugeordnet:
+  - **Einladung**: Der Betreiber erstellt im Admin eine Einladung (E-Mail +
+    Schule); die Lehrkraft öffnet den Einladungslink, setzt Name + Passwort –
+    fertig. Der Link wird im Admin angezeigt (zum Weitergeben) und, falls
+    E-Mail konfiguriert ist, automatisch verschickt.
+  - **Anfrage**: Die Lehrkraft stellt über `/konto/anfrage/` eine Beitritts-
+    anfrage zu einer Schule. Der Betreiber genehmigt sie im Admin – dabei wird
+    automatisch eine Einladung erzeugt.
+- **Login** per E-Mail-Adresse und Passwort.
+
+**Klassen & Schüler/innen**
+
+- **Klassen** (z. B. „5a – Informatik“) legt die Lehrkraft in **ihrer** Schule an.
 - **Schüler/innen hinzufügen** – einzeln oder mehrere auf einmal (eine Zeile
   pro Name). Für jede/n wird automatisch ein eindeutiger 8-stelliger
   Zugangscode erzeugt.
@@ -25,7 +41,10 @@ persönlichen, zufälligen **Zugangscode**, den die Lehrkraft erzeugt.
   vorbereitet (Rollen `Inhaber` / `Kollege/Kollegin` pro Klasse), sodass
   geteilte Kolleg/innen nur auf die freigegebene Klasse zugreifen – nie auf
   die übrigen Kurse.
-- **Admin-Bereich** (`/admin/`) für die technische Verwaltung.
+
+**Erste Schritte als Betreiber:** nach `createsuperuser` im Admin (`/admin/`)
+zuerst eine oder mehrere **Schulen** anlegen, dann Lehrkräfte per **Einladung**
+einladen oder eingegangene **Zugangsanfragen** genehmigen.
 
 ## Nächste Ausbaustufen (geplant)
 

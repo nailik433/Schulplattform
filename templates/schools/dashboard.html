@@ -6,43 +6,62 @@
 <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
     <div>
         <h1>Meine Klassen</h1>
-        <p class="subtitle">Deine Schulen und die zugehörigen Klassen.</p>
+        {% if school %}
+            <p class="subtitle">Schule: <strong>{{ school.name }}</strong></p>
+        {% else %}
+            <p class="subtitle">Dir ist noch keine Schule zugeordnet.</p>
+        {% endif %}
     </div>
-    <a class="btn" href="{% url 'schools:school_create' %}">+ Schule anlegen</a>
+    {% if school %}
+        <a class="btn" href="{% url 'schools:class_create' %}">+ Klasse anlegen</a>
+    {% endif %}
 </div>
 
-{% if not schools %}
+{% if not school %}
     <div class="card">
-        <p>Du hast noch keine Schule angelegt.</p>
-        <a class="btn" href="{% url 'schools:school_create' %}">Erste Schule anlegen</a>
+        <p>
+            Deinem Konto ist noch keine Schule zugeordnet. Bitte wende dich an
+            die Administration der Plattform.
+        </p>
+    </div>
+{% endif %}
+
+<h2>Eigene Klassen</h2>
+{% if owned_classes %}
+    <div class="grid">
+        {% for c in owned_classes %}
+            <a class="card" style="display:block;text-decoration:none;color:inherit;margin:0;"
+               href="{{ c.get_absolute_url }}">
+                <strong>{{ c.name }}</strong>
+                {% if c.subject %}<div class="muted">{{ c.subject }}</div>{% endif %}
+                <div class="muted" style="margin-top:6px;">
+                    {{ c.active_student_count }} Schüler/innen
+                </div>
+            </a>
+        {% endfor %}
     </div>
 {% else %}
-    {% for school in schools %}
-        <div class="card">
-            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-                <h2 style="margin:0;">{{ school.name }}</h2>
-                <a class="btn btn-secondary btn-small"
-                   href="{% url 'schools:class_create' school.pk %}">+ Klasse</a>
-            </div>
-            {% with class_list=school.classes.all %}
-                {% if class_list %}
-                    <div class="grid" style="margin-top:14px;">
-                        {% for c in class_list %}
-                            <a class="card" style="display:block;text-decoration:none;color:inherit;margin:0;"
-                               href="{{ c.get_absolute_url }}">
-                                <strong>{{ c.name }}</strong>
-                                {% if c.subject %}<div class="muted">{{ c.subject }}</div>{% endif %}
-                                <div class="muted" style="margin-top:6px;">
-                                    {{ c.active_student_count }} Schüler/innen
-                                </div>
-                            </a>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <p class="muted" style="margin-top:12px;">Noch keine Klassen in dieser Schule.</p>
-                {% endif %}
-            {% endwith %}
-        </div>
-    {% endfor %}
+    <div class="card">
+        <p class="muted">
+            Noch keine eigenen Klassen.
+            {% if school %}Lege oben rechts deine erste Klasse an.{% endif %}
+        </p>
+    </div>
+{% endif %}
+
+{% if shared_classes %}
+    <h2>Mit mir geteilte Klassen</h2>
+    <div class="grid">
+        {% for c in shared_classes %}
+            <a class="card" style="display:block;text-decoration:none;color:inherit;margin:0;"
+               href="{{ c.get_absolute_url }}">
+                <strong>{{ c.name }}</strong>
+                {% if c.subject %}<div class="muted">{{ c.subject }}</div>{% endif %}
+                <div class="muted" style="margin-top:6px;">
+                    {{ c.school.name }} · {{ c.active_student_count }} Schüler/innen
+                </div>
+            </a>
+        {% endfor %}
+    </div>
 {% endif %}
 {% endblock %}

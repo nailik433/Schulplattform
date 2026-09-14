@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Einladung ungültig{% endblock %}
+
+{% block content %}
+<div class="card card-narrow">
+    <h1>Einladung ungültig</h1>
+    <p>
+        {% if invitation %}
+            Diese Einladung wurde bereits verwendet oder ist abgelaufen.
+        {% else %}
+            Dieser Einladungslink ist unbekannt.
+        {% endif %}
+        Bitte fordere bei der Administration eine neue Einladung an.
+    </p>
+    <a class="btn btn-secondary" href="{% url 'accounts:access_request' %}">Zugang anfragen</a>
+</div>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Zugang anfragen{% endblock %}
+
+{% block content %}
+<div class="card card-narrow">
+    <h1>Zugang anfragen</h1>
+    <p class="subtitle">
+        Die Registrierung ist nur auf Einladung möglich. Stelle hier eine
+        Anfrage – die Administration prüft sie und schickt dir bei Freigabe
+        einen Einladungslink.
+    </p>
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form.as_p }}
+        <div class="form-actions">
+            <button type="submit" class="btn">Anfrage senden</button>
+        </div>
+    </form>
+    <p class="muted" style="margin-top:16px;">
+        Schon ein Konto? <a href="{% url 'accounts:login' %}">Hier anmelden</a>
+    </p>
+</div>
+{% endblock %}

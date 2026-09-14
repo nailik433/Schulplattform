@@ -14,14 +14,23 @@ from .models import (
 User = get_user_model()
 
 
-def make_teacher(email, password="testpass123"):
+def make_teacher(email, password="testpass123", school=None):
     return User.objects.create_user(
-        email=email, password=password, first_name="Test", last_name="Lehrer"
+        email=email,
+        password=password,
+        first_name="Test",
+        last_name="Lehrer",
+        school=school,
     )
 
 
 def make_class(teacher, name="5a", subject="Informatik"):
-    school = School.objects.create(name="Testschule", created_by=teacher)
+    # The class lives in the teacher's school; create one if needed and make
+    # sure the teacher is assigned to it (mirrors the invitation flow).
+    school = teacher.school or School.objects.create(name="Testschule")
+    if teacher.school_id != school.id:
+        teacher.school = school
+        teacher.save(update_fields=["school"])
     school_class = SchoolClass.objects.create(school=school, name=name, subject=subject)
     ClassMembership.objects.create(
         school_class=school_class, teacher=teacher, role=ClassMembership.Role.OWNER
@@ -143,20 +152,25 @@ class StudentLoginTests(TestCase):
         self.assertContains(response, "ungültig")
 
 
-class SignupTests(TestCase):
-    def test_signup_creates_and_logs_in(self):
+class ClassCreateTests(TestCase):
+    def test_teacher_creates_class_in_own_school(self):
+        school = School.objects.create(name="Meine Schule")
+        teacher = make_teacher("owns@example.com", school=school)
+        self.client.force_login(teacher)
         response = self.client.post(
-            reverse("accounts:signup"),
-            {
-                "first_name": "Maria",
-                "last_name": "Musterfrau",
-                "email": "Maria@Example.com",
-                "password1": "einSicheres!PW9",
-                "password2": "einSicheres!PW9",
-            },
+            reverse("schools:class_create"),
+            {"name": "7c", "subject": "Mathe"},
             follow=True,
         )
         self.assertEqual(response.status_code, 200)
-        # Stored lower-cased, and logged straight in.
-        self.assertTrue(User.objects.filter(email="maria@example.com").exists())
-        self.assertTrue(response.context["user"].is_authenticated)
+        created = SchoolClass.objects.get(name="7c")
+        self.assertEqual(created.school, school)
+        self.assertEqual(created.owner, teacher)
+
+    def test_teacher_without_school_cannot_create_class(self):
+        teacher = make_teacher("noschool@example.com", school=None)
+        self.client.force_login(teacher)
+        response = self.client.post(
+            reverse("schools:class_create"), {"name": "7c"}, follow=True
+        )
+        self.assertFalse(SchoolClass.objects.filter(name="7c").exists())

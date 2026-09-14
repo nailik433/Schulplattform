@@ -163,6 +163,25 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
+# Email. Defaults to printing messages to the console so invitation links are
+# visible during development without an SMTP server. Configure the DJANGO_EMAIL_*
+# variables in production to actually send mail.
+EMAIL_BACKEND = os.environ.get(
+    "DJANGO_EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
+)
+EMAIL_HOST = os.environ.get("DJANGO_EMAIL_HOST", "")
+EMAIL_PORT = int(os.environ.get("DJANGO_EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("DJANGO_EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("DJANGO_EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = env_bool("DJANGO_EMAIL_USE_TLS", default=True)
+DEFAULT_FROM_EMAIL = os.environ.get(
+    "DJANGO_DEFAULT_FROM_EMAIL", "Schulplattform <noreply@localhost>"
+)
+
+# Absolute base URL used to build invitation links outside a request context.
+SITE_URL = os.environ.get("DJANGO_SITE_URL", "")
+
+
 # Internationalization
 LANGUAGE_CODE = "de"
 TIME_ZONE = "Europe/Berlin"

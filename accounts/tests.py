@@ -1,3 +1,121 @@
+from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.urls import reverse
+from django.utils import timezone
 
-# Create your tests here.
+from schools.models import School
+
+from .models import TeacherAccessRequest, TeacherInvitation
+
+User = get_user_model()
+
+
+class AccessRequestTests(TestCase):
+    def setUp(self):
+        self.school = School.objects.create(name="Testschule")
+
+    def test_request_creates_pending_entry(self):
+        response = self.client.post(
+            reverse("accounts:access_request"),
+            {
+                "first_name": "Anna",
+                "last_name": "Beispiel",
+                "email": "Anna@Example.com",
+                "school": self.school.pk,
+                "message": "Informatik",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        req = TeacherAccessRequest.objects.get()
+        self.assertEqual(req.email, "anna@example.com")  # normalised
+        self.assertEqual(req.status, TeacherAccessRequest.Status.PENDING)
+
+    def test_request_rejected_for_existing_user(self):
+        User.objects.create_user(email="da@example.com", password="pw-really-strong-1")
+        response = self.client.post(
+            reverse("accounts:access_request"),
+            {
+                "first_name": "D",
+                "last_name": "A",
+                "email": "da@example.com",
+                "school": self.school.pk,
+            },
+        )
+        self.assertContains(response, "bereits ein Konto")
+        self.assertFalse(TeacherAccessRequest.objects.exists())
+
+
+class InvitationTests(TestCase):
+    def setUp(self):
+        self.school = School.objects.create(name="Testschule")
+
+    def _invite(self, email="neu@example.com", **kwargs):
+        return TeacherInvitation.objects.create(
+            email=email, school=self.school, **kwargs
+        )
+
+    def test_accept_creates_account_with_school(self):
+        invitation = self._invite()
+        response = self.client.post(
+            reverse("accounts:invitation_accept", args=[invitation.token]),
+            {
+                "first_name": "Neu",
+                "last_name": "Lehrer",
+                "password1": "einSicheres!PW9",
+                "password2": "einSicheres!PW9",
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        user = User.objects.get(email="neu@example.com")
+        self.assertEqual(user.school, self.school)
+        self.assertTrue(user.check_password("einSicheres!PW9"))
+        invitation.refresh_from_db()
+        self.assertTrue(invitation.is_accepted)
+        self.assertTrue(response.context["user"].is_authenticated)
+
+    def test_invitation_cannot_be_used_twice(self):
+        invitation = self._invite(accepted_at=timezone.now())
+        response = self.client.get(
+            reverse("accounts:invitation_accept", args=[invitation.token])
+        )
+        self.assertEqual(response.status_code, 410)
+
+    def test_unknown_token_is_404(self):
+        response = self.client.get(
+            reverse("accounts:invitation_accept", args=["does-not-exist"])
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_approving_request_creates_invitation(self):
+        req = TeacherAccessRequest.objects.create(
+            first_name="Carla",
+            last_name="Kollegin",
+            email="carla@example.com",
+            school=self.school,
+        )
+        admin = User.objects.create_superuser(
+            email="admin@example.com", password="admin-pw-strong-9"
+        )
+        self.client.force_login(admin)
+        # Trigger the admin action.
+        self.client.post(
+            reverse("admin:accounts_teacheraccessrequest_changelist"),
+            {
+                "action": "approve_requests",
+                "_selected_action": [req.pk],
+            },
+        )
+        req.refresh_from_db()
+        self.assertEqual(req.status, TeacherAccessRequest.Status.APPROVED)
+        self.assertIsNotNone(req.invitation)
+        self.assertEqual(req.invitation.email, "carla@example.com")
+        self.assertEqual(req.invitation.school, self.school)
+
+
+class UserModelTests(TestCase):
+    def test_email_is_normalised_and_login_case_insensitive(self):
+        User.objects.create_user(email="Mix@Example.com", password="pw-strong-xyz-1")
+        # EmailBackend matches case-insensitively.
+        ok = self.client.login(username="mix@example.com", password="pw-strong-xyz-1")
+        self.assertTrue(ok)

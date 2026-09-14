@@ -14,7 +14,8 @@
         {% if user.is_authenticated %}
             <a class="btn" href="{% url 'schools:dashboard' %}">Zu meinen Klassen</a>
         {% else %}
-            <a class="btn" href="{% url 'accounts:signup' %}">Lehrer-Konto erstellen</a>
+            <a class="btn" href="{% url 'accounts:login' %}">Lehrer-Login</a>
+            <a class="btn btn-secondary" href="{% url 'accounts:access_request' %}">Zugang anfragen</a>
             <a class="btn btn-secondary" href="{% url 'schools:student_login' %}">Ich bin Schüler/in</a>
         {% endif %}
     </div>
@@ -24,7 +25,7 @@
     <div class="card">
         <h2 style="margin-top:0;">Für Lehrkräfte</h2>
         <ul class="feature-list">
-            <li>Schulen und Klassen anlegen</li>
+            <li>Klassen der eigenen Schule anlegen</li>
             <li>Zugangscodes für Schüler/innen erzeugen</li>
             <li>Arbeitsblätter austeilen <span class="muted">(folgt)</span></li>
             <li>Abgaben einsammeln <span class="muted">(folgt)</span></li>
