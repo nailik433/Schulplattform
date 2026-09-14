@@ -153,6 +153,36 @@ Die Frist lässt sich über `DJANGO_SUBMISSION_RETENTION_DAYS` (in `.env`) ände
 0 3 1 * * cd /pfad/zu/schulplattform && docker compose exec -T web python manage.py purge_submissions >> /var/log/purge_submissions.log 2>&1
 ```
 
+### Backups (Datenbank + Uploads)
+
+Ein fertiges Skript sichert Datenbank **und** hochgeladene Dateien in einen
+zeitgestempelten Ordner unter `backups/`:
+
+```bash
+./scripts/backup.sh
+```
+
+Aufbewahrung über `BACKUP_KEEP_DAYS` (Standard 30 Tage). **Per Cron** (täglich
+um 2:30 Uhr):
+
+```cron
+30 2 * * * cd /pfad/zu/schulplattform && ./scripts/backup.sh >> /var/log/schulplattform-backup.log 2>&1
+```
+
+> Tipp: Kopiere die `backups/` regelmäßig auf einen zweiten Speicherort (anderer
+> Server / verschlüsselter Cloud-Speicher in der EU) – ein Backup auf demselben
+> Server schützt nicht vor dessen Ausfall.
+
+**Wiederherstellen** aus einem Backup-Ordner (z. B. `backups/20260901-023000`):
+
+```bash
+# Datenbank:
+gunzip -c backups/<ordner>/db.sql.gz | docker compose exec -T db \
+    psql -U "$DJANGO_DB_USER" "$DJANGO_DB_NAME"
+# Dateien:
+docker compose exec -T web tar xzf - -C /app < backups/<ordner>/media.tgz
+```
+
 ### Ohne Docker (klassisch)
 
 Alternativ direkt mit `gunicorn config.wsgi:application` hinter Nginx +

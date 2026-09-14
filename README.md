@@ -84,12 +84,16 @@ persönlichen, zufälligen **Zugangscode**, den die Lehrkraft erzeugt.
 zuerst eine oder mehrere **Schulen** anlegen, dann Lehrkräfte per **Einladung**
 einladen oder eingegangene **Zugangsanfragen** genehmigen.
 
-## Vor dem Echtbetrieb empfohlen
+## Betrieb & Datenschutz (bereits vorhanden)
 
-- Passwort-Zurücksetzen für Lehrkräfte (per E-Mail).
-- Impressum & Datenschutzerklärung, Löschkonzept (z. B. Abgaben am
-  Schuljahresende automatisch löschen).
-- Regelmäßige Backups (Datenbank + Upload-Ordner).
+- **Passwort-Zurücksetzen** für Lehrkräfte per E-Mail (`/konto/passwort/reset/`).
+- **Impressum & Datenschutzerklärung** als Vorlagen (Footer-Links) – vor dem
+  Einsatz die [Platzhalter] ausfüllen und rechtlich prüfen lassen.
+- **Löschkonzept**: `python manage.py purge_submissions` entfernt alte Abgaben
+  (Frist über `DJANGO_SUBMISSION_RETENTION_DAYS`) – per Cron automatisierbar.
+- **Backups**: `./scripts/backup.sh` sichert Datenbank + Uploads.
+
+Details und Cron-Beispiele stehen in [`DEPLOY.md`](DEPLOY.md).
 
 ---
 
