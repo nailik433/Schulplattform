@@ -6,17 +6,15 @@
 {$DOMAIN} {
 	encode gzip zstd
 
-	# Serve collected static files and uploaded media straight from disk.
+	# Serve collected static files (CSS/JS) straight from disk.
 	handle_path /static/* {
 		root * /srv/static
 		file_server
 	}
-	handle_path /media/* {
-		root * /srv/media
-		file_server
-	}
 
-	# Everything else goes to the Django app.
+	# Uploaded files (worksheets, later submissions) are NOT served directly:
+	# they contain user content and are delivered only through Django's
+	# access-checked download view. So everything else goes to the app.
 	handle {
 		reverse_proxy web:8000
 	}

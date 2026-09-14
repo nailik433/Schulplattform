@@ -48,13 +48,23 @@ persönlichen, zufälligen **Zugangscode**, den die Lehrkraft erzeugt.
   geteilte Kolleg/innen nur auf die freigegebene Klasse zugreifen – nie auf
   die übrigen Kurse.
 
+**Arbeitsblätter austeilen**
+
+- Eine Lehrkraft legt in einer Klasse **Arbeitsblätter** an (Titel,
+  Beschreibung, optionale Frist) und hängt **eine oder mehrere Dateien** an
+  (z. B. PDFs, max. 25 MB/Datei).
+- **Schüler/innen** sehen die Arbeitsblätter nach dem Login auf ihrer
+  Startseite und können die Dateien herunterladen.
+- **Geschützte Downloads**: Dateien werden nicht über öffentliche URLs
+  ausgeliefert, sondern nur über eine zugriffsgeprüfte View – erreichbar für
+  die Lehrkräfte der Klasse und deren Schüler/innen, sonst nicht.
+
 **Erste Schritte als Betreiber:** nach `createsuperuser` im Admin (`/admin/`)
 zuerst eine oder mehrere **Schulen** anlegen, dann Lehrkräfte per **Einladung**
 einladen oder eingegangene **Zugangsanfragen** genehmigen.
 
 ## Nächste Ausbaustufen (geplant)
 
-- **Stufe 2** – Arbeitsblätter/Dateien an eine Klasse austeilen.
 - **Stufe 3** – Abgaben einsammeln (Datei-Upload durch Schüler/innen),
   Abgabe-Übersicht und Fristen.
 - **Stufe 4** – Klasse an Kolleg/innen weiterleiten (Freigabe-UI auf Basis des

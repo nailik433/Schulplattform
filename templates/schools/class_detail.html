@@ -46,6 +46,39 @@
     </div>
 </div>
 
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-top:28px;">
+    <h2 style="margin:0;">Arbeitsblätter</h2>
+    <a class="btn" href="{% url 'worksheets:assignment_create' school_class.pk %}">+ Arbeitsblatt austeilen</a>
+</div>
+{% with assignments=school_class.assignments.all %}
+    {% if assignments %}
+        <div class="card" style="padding:0;overflow-x:auto;">
+            <table class="data">
+                <thead>
+                    <tr>
+                        <th>Titel</th>
+                        <th>Dateien</th>
+                        <th>Abgabe bis</th>
+                        <th>Erstellt</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in assignments %}
+                        <tr>
+                            <td><a href="{{ a.get_absolute_url }}">{{ a.title }}</a></td>
+                            <td>{{ a.files.count }}</td>
+                            <td>{% if a.due_date %}{{ a.due_date|date:"d.m.Y H:i" }}{% else %}—{% endif %}</td>
+                            <td class="muted">{{ a.created_at|date:"d.m.Y" }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="card"><p class="muted">Noch keine Arbeitsblätter ausgeteilt.</p></div>
+    {% endif %}
+{% endwith %}
+
 <h2>Schüler/innen &amp; Tokens</h2>
 {% if students %}
     <div class="card" style="padding:0;overflow-x:auto;">

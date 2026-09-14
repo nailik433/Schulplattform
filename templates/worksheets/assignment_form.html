@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}{% if assignment %}Arbeitsblatt bearbeiten{% else %}Arbeitsblatt austeilen{% endif %}{% endblock %}
+
+{% block content %}
+<p class="muted">
+    <a href="{% url 'schools:class_detail' school_class.pk %}">← {{ school_class.name }}</a>
+</p>
+
+<div class="card card-narrow">
+    <h1>{% if assignment %}Arbeitsblatt bearbeiten{% else %}Arbeitsblatt austeilen{% endif %}</h1>
+    <p class="subtitle">für {{ school_class.name }}{% if school_class.subject %} · {{ school_class.subject }}{% endif %}</p>
+
+    {% if assignment and assignment.files.all %}
+        <p><strong>Bereits angehängt:</strong></p>
+        <ul>
+            {% for file in assignment.files.all %}
+                <li>
+                    {{ file.original_name }}
+                    <form class="inline-form" method="post"
+                          action="{% url 'worksheets:file_delete' file.pk %}"
+                          onsubmit="return confirm('Datei „{{ file.original_name|escapejs }}“ entfernen?');">
+                        {% csrf_token %}
+                        <button type="submit" class="link-button">entfernen</button>
+                    </form>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+        {{ form.as_p }}
+        <div class="form-actions">
+            <button type="submit" class="btn">{% if assignment %}Speichern{% else %}Austeilen{% endif %}</button>
+            <a class="btn btn-secondary" href="{% url 'schools:class_detail' school_class.pk %}">Abbrechen</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -12,11 +12,37 @@
     </p>
 </div>
 
-<div class="card">
-    <h2 style="margin-top:0;">Deine Aufgaben</h2>
-    <p class="muted">
-        Hier erscheinen bald die Arbeitsblätter deiner Lehrkraft und du kannst
-        deine Abgaben hochladen. Dieser Bereich wird als Nächstes gebaut.
-    </p>
-</div>
+<h2>Deine Arbeitsblätter</h2>
+{% if assignments %}
+    {% for assignment in assignments %}
+        <div class="card">
+            <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                <strong>{{ assignment.title }}</strong>
+                {% if assignment.due_date %}
+                    <span class="badge">Abgabe bis {{ assignment.due_date|date:"d.m.Y H:i" }}</span>
+                {% endif %}
+            </div>
+            {% if assignment.description %}
+                <p style="white-space:pre-line;margin:10px 0 0;">{{ assignment.description }}</p>
+            {% endif %}
+            {% with files=assignment.files.all %}
+                {% if files %}
+                    <ul style="margin:12px 0 0;padding-left:18px;">
+                        {% for file in files %}
+                            <li>
+                                <a href="{% url 'worksheets:file_download' file.pk %}">
+                                    ⬇️ {{ file.original_name }}
+                                </a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            {% endwith %}
+        </div>
+    {% endfor %}
+{% else %}
+    <div class="card">
+        <p class="muted">Aktuell gibt es keine Arbeitsblätter. Schau später wieder vorbei.</p>
+    </div>
+{% endif %}
 {% endblock %}

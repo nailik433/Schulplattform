@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}{{ assignment.title }}{% endblock %}
+
+{% block content %}
+<p class="muted">
+    <a href="{% url 'schools:class_detail' assignment.school_class.pk %}">← {{ assignment.school_class.name }}</a>
+</p>
+
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+    <h1>{{ assignment.title }}</h1>
+    <div class="actions-cell">
+        <a class="btn btn-secondary btn-small" href="{% url 'worksheets:assignment_edit' assignment.pk %}">Bearbeiten</a>
+        <form class="inline-form" method="post"
+              action="{% url 'worksheets:assignment_delete' assignment.pk %}"
+              onsubmit="return confirm('Arbeitsblatt „{{ assignment.title|escapejs }}“ wirklich löschen?');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger btn-small">Löschen</button>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    {% if assignment.due_date %}
+        <p><span class="badge">Abgabe bis {{ assignment.due_date|date:"d.m.Y H:i" }}</span></p>
+    {% endif %}
+    {% if assignment.description %}
+        <p style="white-space:pre-line;">{{ assignment.description }}</p>
+    {% else %}
+        <p class="muted">Keine Beschreibung.</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2 style="margin-top:0;">Dateien</h2>
+    {% if files %}
+        <ul>
+            {% for file in files %}
+                <li>
+                    <a href="{% url 'worksheets:file_download' file.pk %}">⬇️ {{ file.original_name }}</a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="muted">Keine Dateien angehängt.</p>
+    {% endif %}
+</div>
+
+<p class="muted">
+    Schüler/innen sehen dieses Arbeitsblatt nach dem Login mit ihrem Token auf ihrer Startseite.
+</p>
+{% endblock %}

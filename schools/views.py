@@ -338,7 +338,14 @@ def student_space(request, token):
 
     _reset_attempts(request)
     request.session[STUDENT_SESSION_KEY] = student.pk
-    return render(request, "students/home.html", {"student": student})
+    assignments = (
+        student.school_class.assignments.all().prefetch_related("files")
+    )
+    return render(
+        request,
+        "students/home.html",
+        {"student": student, "assignments": assignments},
+    )
 
 
 def student_logout(request):
