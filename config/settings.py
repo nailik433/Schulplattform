@@ -44,12 +44,19 @@ ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", default="localhost,127.0.0.1")
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
 
 # When running inside GitHub Codespaces (for a quick beta test without a
-# rented server), automatically trust the forwarded *.app.github.dev URL so
-# the app and its forms work over the public preview link out of the box.
-_codespaces_domain = os.environ.get("GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN")
-if DEBUG and _codespaces_domain:
+# rented server), make the app work over the forwarded *.app.github.dev URL
+# out of the box: trust the host, trust the HTTPS origin for CSRF, and treat
+# the request as secure. The Codespaces proxy terminates TLS and forwards to
+# the dev server over plain HTTP, so without the last line Django would think
+# the request is HTTP and reject form submissions (e.g. "Schule anlegen")
+# with a CSRF error.
+if DEBUG and os.environ.get("CODESPACES") == "true":
+    _codespaces_domain = os.environ.get(
+        "GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN", "app.github.dev"
+    )
     ALLOWED_HOSTS.append("." + _codespaces_domain)
     CSRF_TRUSTED_ORIGINS.append("https://*." + _codespaces_domain)
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 
 # Application definition
