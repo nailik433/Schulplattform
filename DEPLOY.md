@@ -67,6 +67,11 @@ Damit bekommst du eine dauerhafte Test-URL, ohne eigenen Server.
 
 ---
 
+> 📗 **Schritt-für-Schritt mit eigener Domain und HTTPS:** siehe
+> [`docs/SERVER-HETZNER.md`](docs/SERVER-HETZNER.md) – eine geführte Anleitung
+> von „Server bestellen" bis „live", die auch für Netcup/IONOS/Hostinger-VPS
+> passt. Der folgende Abschnitt ist die kompakte Referenz dazu.
+
 ## B) Produktiv auf einem gemieteten Server (Docker)
 
 Für den echten Betrieb inkl. eigener Domain und automatischem HTTPS liegt ein
