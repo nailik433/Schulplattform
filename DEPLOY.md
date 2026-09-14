@@ -131,6 +131,28 @@ docker compose up -d --build
 Migrationen und das Sammeln der statischen Dateien laufen dabei automatisch
 über `docker-entrypoint.sh`.
 
+### Löschkonzept: alte Abgaben automatisch entfernen
+
+Abgaben sind personenbezogene Daten und sollten nach dem Schuljahr gelöscht
+werden. Dafür gibt es ein Management-Kommando:
+
+```bash
+# Vorschau (löscht nichts):
+docker compose exec web python manage.py purge_submissions --dry-run
+# Löscht Abgaben älter als die Aufbewahrungsfrist (Standard 400 Tage):
+docker compose exec web python manage.py purge_submissions
+# Oder gezielt vor einem Datum (z. B. Schuljahresende):
+docker compose exec web python manage.py purge_submissions --before 2026-08-01
+```
+
+Die Frist lässt sich über `DJANGO_SUBMISSION_RETENTION_DAYS` (in `.env`) ändern.
+
+**Automatisieren per Cron** (Beispiel: monatlich am 1. um 3 Uhr):
+
+```cron
+0 3 1 * * cd /pfad/zu/schulplattform && docker compose exec -T web python manage.py purge_submissions >> /var/log/purge_submissions.log 2>&1
+```
+
 ### Ohne Docker (klassisch)
 
 Alternativ direkt mit `gunicorn config.wsgi:application` hinter Nginx +

@@ -182,6 +182,13 @@ DEFAULT_FROM_EMAIL = os.environ.get(
 # Absolute base URL used to build invitation links outside a request context.
 SITE_URL = os.environ.get("DJANGO_SITE_URL", "")
 
+# Data retention: submissions older than this many days are removed by the
+# `purge_submissions` management command (run it via cron). ~400 days keeps a
+# full school year. Set DJANGO_SUBMISSION_RETENTION_DAYS to change it.
+SUBMISSION_RETENTION_DAYS = int(
+    os.environ.get("DJANGO_SUBMISSION_RETENTION_DAYS", "400")
+)
+
 
 # Internationalization
 LANGUAGE_CODE = "de"

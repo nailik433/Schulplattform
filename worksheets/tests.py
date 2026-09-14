@@ -259,6 +259,48 @@ class WorksheetTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(SubmissionFile.objects.filter(pk=sf.pk).exists())
 
+    def test_purge_submissions_command(self):
+        from io import StringIO
+
+        from django.core.management import call_command
+        from django.utils import timezone
+
+        assignment = Assignment.objects.create(
+            school_class=self.school_class, title="AB", created_by=self.teacher
+        )
+        sf = self._submit_as(assignment, self.student)
+        submission = sf.submission
+        path = sf.file.path
+
+        # Make the submission look old (bypass auto_now_add via queryset update).
+        old = timezone.now() - timezone.timedelta(days=500)
+        Submission.objects.filter(pk=submission.pk).update(created_at=old)
+
+        import os
+
+        self.assertTrue(os.path.exists(path))
+
+        # Dry-run keeps everything.
+        call_command("purge_submissions", "--days", "400", "--dry-run", stdout=StringIO())
+        self.assertTrue(Submission.objects.filter(pk=submission.pk).exists())
+
+        # Real run removes the record and the file blob.
+        call_command("purge_submissions", "--days", "400", stdout=StringIO())
+        self.assertFalse(Submission.objects.filter(pk=submission.pk).exists())
+        self.assertFalse(os.path.exists(path))
+
+    def test_purge_keeps_recent_submissions(self):
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        assignment = Assignment.objects.create(
+            school_class=self.school_class, title="AB", created_by=self.teacher
+        )
+        self._submit_as(assignment, self.student)
+        call_command("purge_submissions", "--days", "400", stdout=StringIO())
+        self.assertEqual(Submission.objects.count(), 1)
+
     def test_late_submission_flagged(self):
         from datetime import timedelta
 

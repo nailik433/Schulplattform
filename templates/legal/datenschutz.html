@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Datenschutzerklärung{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:720px;margin:0 auto;">
+    <h1>Datenschutzerklärung</h1>
+    <p class="muted">
+        ⚠️ <strong>Entwurf.</strong> Diese Vorlage beschreibt, wie die Plattform
+        technisch mit Daten umgeht. Sie ersetzt keine Rechtsberatung – bitte vor
+        dem Einsatz an einer Schule mit der Schulleitung bzw. dem/der
+        Datenschutzbeauftragten prüfen und die [Platzhalter] ausfüllen.
+    </p>
+
+    <h2>1. Verantwortlicher</h2>
+    <p>
+        [Name / Einrichtung], [Adresse], [E-Mail]. Datenschutzbeauftragte/r:
+        [Name / Kontakt].
+    </p>
+
+    <h2>2. Welche Daten verarbeitet werden</h2>
+    <ul>
+        <li><strong>Lehrkräfte:</strong> Name und E-Mail-Adresse, Passwort
+            (nur als Hashwert gespeichert), Schulzuordnung.</li>
+        <li><strong>Schüler/innen:</strong> eine laufende Nummer je Klasse und
+            ein zufälliger Zugangscode (Token). Ein Name ist <em>optional</em>
+            und wird nur gespeichert, wenn die Lehrkraft ihn einträgt
+            (Datenminimierung).</li>
+        <li><strong>Inhalte:</strong> von Lehrkräften ausgeteilte Arbeitsblätter
+            und von Schüler/innen hochgeladene Abgaben (Dateien).</li>
+        <li><strong>Technisch:</strong> zur Absicherung des Logins wird bei
+            Fehlversuchen kurzzeitig die IP-Adresse ausgewertet
+            (Missbrauchsschutz).</li>
+    </ul>
+
+    <h2>3. Zweck und Rechtsgrundlage</h2>
+    <p>
+        Die Daten werden ausschließlich zur Durchführung des Unterrichts
+        (Austeilen von Material, Einsammeln von Abgaben) verarbeitet.
+        Rechtsgrundlage: [z. B. Einwilligung / landesrechtliche Grundlage –
+        bitte mit der Schule klären].
+    </p>
+
+    <h2>4. Hosting</h2>
+    <p>
+        Die Plattform läuft auf einem Server bei [Anbieter], Standort
+        [Rechenzentrum, möglichst EU/Deutschland]. Es werden keine Daten an
+        Dritte außerhalb dieses Servers übertragen; QR-Codes werden lokal auf
+        dem Server erzeugt.
+    </p>
+
+    <h2>5. Speicherdauer / Löschung</h2>
+    <p>
+        Abgaben werden nach [Zeitraum, z. B. Ende des Schuljahres] gelöscht.
+        Konten und Klassendaten werden gelöscht, wenn sie nicht mehr benötigt
+        werden. Auf Anfrage können Daten jederzeit gelöscht werden.
+    </p>
+
+    <h2>6. Deine Rechte</h2>
+    <p>
+        Betroffene haben das Recht auf Auskunft, Berichtigung, Löschung,
+        Einschränkung der Verarbeitung sowie Beschwerde bei einer
+        Aufsichtsbehörde. Kontakt: [E-Mail].
+    </p>
+</div>
+{% endblock %}
