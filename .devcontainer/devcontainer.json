@@ -1,7 +1,7 @@
 {
     "name": "Schulplattform (Beta)",
     "image": "mcr.microsoft.com/devcontainers/python:3.11",
-    "postCreateCommand": "pip install --user -r requirements.txt && python manage.py migrate",
+    "postCreateCommand": "pip install --user -r requirements.txt && python manage.py migrate --no-input",
     "forwardPorts": [8000],
     "portsAttributes": {
         "8000": {
