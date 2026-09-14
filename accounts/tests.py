@@ -113,6 +113,55 @@ class InvitationTests(TestCase):
         self.assertEqual(req.invitation.school, self.school)
 
 
+class PasswordResetTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="reset@example.com", password="altes-PW-9xyz", first_name="R", last_name="U"
+        )
+
+    def test_reset_sends_email_for_known_address(self):
+        from django.core import mail
+
+        response = self.client.post(
+            reverse("accounts:password_reset"), {"email": "reset@example.com"}
+        )
+        self.assertRedirects(response, reverse("accounts:password_reset_done"))
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("passwort/neu/", mail.outbox[0].body)
+
+    def test_no_email_for_unknown_address(self):
+        from django.core import mail
+
+        self.client.post(
+            reverse("accounts:password_reset"), {"email": "unbekannt@example.com"}
+        )
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_full_reset_flow_sets_new_password(self):
+        from django.core import mail
+        from django.contrib.auth.tokens import default_token_generator
+        from django.utils.encoding import force_bytes
+        from django.utils.http import urlsafe_base64_encode
+
+        self.client.post(
+            reverse("accounts:password_reset"), {"email": "reset@example.com"}
+        )
+        uid = urlsafe_base64_encode(force_bytes(self.user.pk))
+        token = default_token_generator.make_token(self.user)
+        # GET first (the view moves the token into the session), then POST.
+        confirm_url = reverse(
+            "accounts:password_reset_confirm", kwargs={"uidb64": uid, "token": token}
+        )
+        self.client.get(confirm_url)
+        response = self.client.post(
+            confirm_url.replace(token, "set-password"),
+            {"new_password1": "ganzNeues-PW-42", "new_password2": "ganzNeues-PW-42"},
+        )
+        self.assertRedirects(response, reverse("accounts:password_reset_complete"))
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("ganzNeues-PW-42"))
+
+
 class UserModelTests(TestCase):
     def test_email_is_normalised_and_login_case_insensitive(self):
         User.objects.create_user(email="Mix@Example.com", password="pw-strong-xyz-1")
