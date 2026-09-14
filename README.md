@@ -33,7 +33,7 @@ persönlichen, zufälligen **Zugangscode**, den die Lehrkraft erzeugt.
 - **Schüler/innen anlegen** auf drei Wegen: als Anzahl anonymer Plätze
   (#001, #002 …), einzeln mit optionalem Namen, oder als Namensliste. Jede/r
   bekommt automatisch eine fortlaufende Nummer und einen eindeutigen
-  **12-stelligen Token** (Kleinbuchstaben, ohne verwechselbare Zeichen).
+  **8-stelligen Token** (Kleinbuchstaben + Ziffern, ohne verwechselbare Zeichen).
 - **Tokens verwalten**: neu erzeugen, deaktivieren/aktivieren, entfernen.
 - **Schüler-Login** ohne Konto – nur per Token: entweder auf der Startseite
   (`/s/`) eintippen oder den **QR-Code scannen**, der direkt auf `/s/<token>/`

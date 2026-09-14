@@ -41,7 +41,7 @@ def make_class(teacher, name="5a", subject="Informatik"):
 class AccessCodeTests(TestCase):
     def test_generated_code_length_and_alphabet(self):
         code = generate_access_code()
-        self.assertEqual(len(code), 12)
+        self.assertEqual(len(code), 8)
         self.assertTrue(all(ch in ACCESS_CODE_ALPHABET for ch in code))
         # Alphabet is lowercase and free of ambiguous characters.
         self.assertEqual(code, code.lower())

@@ -7,9 +7,14 @@ from django.urls import reverse
 
 # Alphabet for student access tokens. Deliberately excludes visually
 # ambiguous characters (l, o, i, 0, 1) so tokens are easy to read aloud and
-# type on a phone. Lowercase, 12 characters (like the VokaGo tokens).
+# type on a phone. Lowercase letters + digits.
+#
+# Length 8 over this 31-character alphabet yields ~8.5e11 combinations. Even
+# with the maximum expected ~600 active tokens and the per-IP rate limit,
+# guessing a valid token is practically impossible. (For comparison, a
+# 6-character token would be noticeably weaker against distributed guessing.)
 ACCESS_CODE_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"
-ACCESS_CODE_LENGTH = 12
+ACCESS_CODE_LENGTH = 8
 
 
 def generate_access_code(length=ACCESS_CODE_LENGTH):
