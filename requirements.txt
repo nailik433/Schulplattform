@@ -2,8 +2,7 @@
 Django==5.1.15
 Pillow==12.3.0
 
-# Production extras (uncomment when deploying to your own server)
-# gunicorn==23.0.0            # WSGI application server
-# psycopg[binary]==3.2.3      # PostgreSQL driver
-# whitenoise==6.7.0           # serve static files without a separate web server
-# python-dotenv==1.0.1        # load a .env file for local development
+# Production runtime
+gunicorn==23.0.0            # WSGI application server
+psycopg[binary]==3.2.3      # PostgreSQL driver
+whitenoise==6.7.0           # serve static files without a separate web server

@@ -1,0 +1,17 @@
+{
+    "name": "Schulplattform (Beta)",
+    "image": "mcr.microsoft.com/devcontainers/python:3.11",
+    "postCreateCommand": "pip install --user -r requirements.txt && python manage.py migrate",
+    "forwardPorts": [8000],
+    "portsAttributes": {
+        "8000": {
+            "label": "Schulplattform",
+            "onAutoForward": "openPreview"
+        }
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": ["ms-python.python"]
+        }
+    }
+}

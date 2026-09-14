@@ -1,0 +1,23 @@
+# Caddy fetches and renews a free Let's Encrypt certificate automatically.
+{
+	email {$LETSENCRYPT_EMAIL}
+}
+
+{$DOMAIN} {
+	encode gzip zstd
+
+	# Serve collected static files and uploaded media straight from disk.
+	handle_path /static/* {
+		root * /srv/static
+		file_server
+	}
+	handle_path /media/* {
+		root * /srv/media
+		file_server
+	}
+
+	# Everything else goes to the Django app.
+	handle {
+		reverse_proxy web:8000
+	}
+}

@@ -43,6 +43,14 @@ ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", default="localhost,127.0.0.1")
 # Hosts that may submit forms (needed behind HTTPS on a real domain).
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
 
+# When running inside GitHub Codespaces (for a quick beta test without a
+# rented server), automatically trust the forwarded *.app.github.dev URL so
+# the app and its forms work over the public preview link out of the box.
+_codespaces_domain = os.environ.get("GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN")
+if DEBUG and _codespaces_domain:
+    ALLOWED_HOSTS.append("." + _codespaces_domain)
+    CSRF_TRUSTED_ORIGINS.append("https://*." + _codespaces_domain)
+
 
 # Application definition
 
@@ -164,12 +172,33 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
+    },
+}
+
 # Default primary key field type
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 # Security hardening that only takes effect in production (DEBUG off).
 if not DEBUG:
+    # Serve compressed, cache-busted static files straight from the app
+    # (via WhiteNoise) so no extra static file server is required. Only
+    # enabled when WhiteNoise is installed, so local development without it
+    # keeps working unchanged.
+    try:
+        import whitenoise  # noqa: F401
+
+        MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
+        STORAGES["staticfiles"]["BACKEND"] = (
+            "whitenoise.storage.CompressedManifestStaticFilesStorage"
+        )
+    except ImportError:
+        pass
+
     SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", default=True)
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
