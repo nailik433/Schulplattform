@@ -9,12 +9,12 @@ from django.urls import reverse
 # ambiguous characters (l, o, i, 0, 1) so tokens are easy to read aloud and
 # type on a phone. Lowercase letters + digits.
 #
-# Length 8 over this 31-character alphabet yields ~8.5e11 combinations. Even
-# with the maximum expected ~600 active tokens and the per-IP rate limit,
-# guessing a valid token is practically impossible. (For comparison, a
-# 6-character token would be noticeably weaker against distributed guessing.)
+# Length 6 over this 31-character alphabet yields ~887 million combinations.
+# With the expected handful of hundred active tokens and the per-IP login
+# rate limit, guessing a valid token stays impractical while keeping the code
+# short and easy to type (like Fobizz's 6-character codes).
 ACCESS_CODE_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"
-ACCESS_CODE_LENGTH = 8
+ACCESS_CODE_LENGTH = 6
 
 
 def generate_access_code(length=ACCESS_CODE_LENGTH):

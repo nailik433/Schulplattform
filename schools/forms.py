@@ -72,7 +72,7 @@ class StudentLoginForm(forms.Form):
         max_length=16,
         widget=forms.TextInput(
             attrs={
-                "placeholder": "z. B. k7m3np9q",
+                "placeholder": "z. B. k7m3np",
                 "autocapitalize": "none",
                 "autocomplete": "off",
                 "spellcheck": "false",
