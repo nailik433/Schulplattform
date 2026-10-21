@@ -31,6 +31,20 @@ if command -v ufw >/dev/null 2>&1; then
     ufw --force enable >/dev/null 2>&1 || true
 fi
 
+# 2b. Auf kleinen Servern eine Swap-Datei anlegen, damit der erste Docker-Build
+# nicht am Arbeitsspeicher scheitert.
+if [ ! -f /swapfile ]; then
+    total_kb=$(awk '/MemTotal/{print $2}' /proc/meminfo 2>/dev/null || echo 0)
+    if [ "${total_kb:-0}" -lt 3000000 ]; then
+        echo "→ Swap-Datei (2 GB) anlegen (wenig RAM erkannt) ..."
+        fallocate -l 2G /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count=2048 status=none
+        chmod 600 /swapfile
+        mkswap /swapfile >/dev/null 2>&1
+        swapon /swapfile 2>/dev/null || true
+        grep -q '/swapfile' /etc/fstab 2>/dev/null || echo '/swapfile none swap sw 0 0' >> /etc/fstab
+    fi
+fi
+
 # 3. .env erzeugen (falls noch nicht vorhanden)
 if [ -f .env ]; then
     echo "→ .env existiert bereits – wird nicht überschrieben."
