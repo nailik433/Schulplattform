@@ -9,6 +9,18 @@ Zeitaufwand: ca. 30–60 Minuten. Du brauchst: eine Kreditkarte/PayPal für den
 Server, einen Domainnamen und ein Terminal (Mac/Linux: „Terminal"; Windows:
 „PowerShell" oder „Windows Terminal").
 
+> ⚡ **Kurzfassung** (Details stehen unten Schritt für Schritt): Server mieten
+> (Schritt 1) → Domain auf die Server-IP zeigen lassen (Schritt 2) → per SSH
+> einloggen und den Code holen:
+> ```bash
+> apt update && apt install -y git
+> git clone --branch claude/school-platform-worksheets-c0x6aj https://github.com/nailik433/Schulplattform.git schulplattform
+> cd schulplattform && bash scripts/server-setup.sh
+> ```
+> Das Setup-Skript erledigt Docker, Firewall, Schlüssel und Start automatisch
+> und fragt nur nach Domain + E-Mail. Danach `docker compose exec web python
+> manage.py createsuperuser`.
+
 ---
 
 ## 1. Server bestellen
