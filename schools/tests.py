@@ -419,3 +419,72 @@ class ClassDeleteTests(TestCase):
         )
         self.assertEqual(response.status_code, 404)
         self.assertTrue(SchoolClass.objects.filter(pk=self.school_class.pk).exists())
+
+
+class StudentImportTests(TestCase):
+    def setUp(self):
+        self.teacher = make_teacher("imp@example.com")
+        self.school_class = make_class(self.teacher)
+        self.client.force_login(self.teacher)
+
+    def test_import_two_columns(self):
+        self.client.post(
+            reverse("schools:student_import", args=[self.school_class.pk]),
+            {"data": "7b-001\ta1b2c3\n7b-002\td4e5f6"},
+        )
+        codes = set(self.school_class.students.values_list("access_code", flat=True))
+        self.assertEqual(codes, {"a1b2c3", "d4e5f6"})
+        s = self.school_class.students.get(access_code="a1b2c3")
+        self.assertEqual(s.display_name, "7b-001")
+
+    def test_import_single_column_and_normalise(self):
+        self.client.post(
+            reverse("schools:student_import", args=[self.school_class.pk]),
+            {"data": " ABC123 \nXYZ789"},
+        )
+        codes = set(self.school_class.students.values_list("access_code", flat=True))
+        self.assertEqual(codes, {"abc123", "xyz789"})  # lowercased, trimmed
+
+    def test_import_skips_existing_token(self):
+        Student.objects.create(school_class=self.school_class, access_code="dup123")
+        self.client.post(
+            reverse("schools:student_import", args=[self.school_class.pk]),
+            {"data": "dup123\nnew123"},
+        )
+        self.assertTrue(self.school_class.students.filter(access_code="new123").exists())
+        self.assertEqual(
+            self.school_class.students.filter(access_code="dup123").count(), 1
+        )
+
+    def test_import_rejects_invalid_token(self):
+        self.client.post(
+            reverse("schools:student_import", args=[self.school_class.pk]),
+            {"data": "name\tok!!"},
+        )
+        self.assertFalse(self.school_class.students.exists())
+
+    def test_set_token(self):
+        s = Student.objects.create(school_class=self.school_class)
+        self.client.post(
+            reverse("schools:student_set_token", args=[self.school_class.pk, s.pk]),
+            {"token": "Mein-Code"},  # normalised -> invalid (hyphen) -> unchanged
+        )
+        s.refresh_from_db()
+        self.assertNotEqual(s.access_code, "mein-code")
+        # valid token
+        self.client.post(
+            reverse("schools:student_set_token", args=[self.school_class.pk, s.pk]),
+            {"token": "GOOD99"},
+        )
+        s.refresh_from_db()
+        self.assertEqual(s.access_code, "good99")
+
+    def test_set_token_rejects_duplicate(self):
+        a = Student.objects.create(school_class=self.school_class, access_code="aaa111")
+        b = Student.objects.create(school_class=self.school_class)
+        self.client.post(
+            reverse("schools:student_set_token", args=[self.school_class.pk, b.pk]),
+            {"token": "aaa111"},
+        )
+        b.refresh_from_db()
+        self.assertNotEqual(b.access_code, "aaa111")

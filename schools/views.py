@@ -11,8 +11,10 @@ from .forms import (
     ClassDeleteConfirmForm,
     CountStudentForm,
     SchoolClassForm,
+    SetTokenForm,
     ShareClassForm,
     StudentForm,
+    StudentImportForm,
     StudentLoginForm,
 )
 from .models import ClassMembership, SchoolClass, Student
@@ -189,6 +191,7 @@ def class_detail(request, pk):
         "student_form": StudentForm(),
         "count_form": CountStudentForm(),
         "bulk_form": BulkStudentForm(),
+        "import_form": StudentImportForm(),
         "is_owner": _is_owner(request.user, school_class),
         "owner": owner_membership.teacher if owner_membership else None,
         "collaborators": collaborators,
@@ -401,6 +404,53 @@ def student_bulk_delete(request, pk):
     count = qs.count()
     qs.delete()
     messages.success(request, f"{count} Schüler/in(nen) wurden entfernt.")
+    return redirect(school_class.get_absolute_url())
+
+
+@login_required
+@require_POST
+def student_import(request, pk):
+    """Import students with existing tokens (e.g. a pasted Fobizz list)."""
+    school_class = _get_teacher_class(request.user, pk)
+    form = StudentImportForm(request.POST)
+    if not form.is_valid():
+        for err in form.errors.get("data", ["Import fehlgeschlagen."]):
+            messages.error(request, err)
+        return redirect(school_class.get_absolute_url())
+
+    created, skipped = 0, []
+    for label, token in form.cleaned_data["data"]:
+        if Student.objects.filter(access_code__iexact=token).exists():
+            skipped.append(token)
+            continue
+        Student.objects.create(
+            school_class=school_class, display_name=label, access_code=token
+        )
+        created += 1
+    msg = f"{created} Schüler/in(nen) importiert."
+    if skipped:
+        shown = ", ".join(skipped[:10]) + ("…" if len(skipped) > 10 else "")
+        msg += f" {len(skipped)} übersprungen (Token schon vergeben): {shown}"
+    messages.success(request, msg)
+    return redirect(school_class.get_absolute_url())
+
+
+@login_required
+@require_POST
+def student_set_token(request, pk, student_pk):
+    school_class = _get_teacher_class(request.user, pk)
+    student = get_object_or_404(school_class.students, pk=student_pk)
+    form = SetTokenForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, "Ungültiger Token (3–16 Kleinbuchstaben/Ziffern).")
+        return redirect(school_class.get_absolute_url())
+    token = form.cleaned_data["token"]
+    if Student.objects.filter(access_code__iexact=token).exclude(pk=student.pk).exists():
+        messages.error(request, f"Token „{token}“ ist schon vergeben.")
+    else:
+        student.access_code = token
+        student.save(update_fields=["access_code"])
+        messages.success(request, f"Neuer Token für {student.seat_label or student.label}: {token}")
     return redirect(school_class.get_absolute_url())
 
 

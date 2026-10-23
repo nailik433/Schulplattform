@@ -89,6 +89,8 @@
                                 <div class="actions-cell">
                                     <button type="submit" class="btn btn-secondary btn-small"
                                             formaction="{% url 'schools:student_regenerate_code' school_class.pk student.pk %}">Neuer Token</button>
+                                    <button type="button" class="btn btn-secondary btn-small"
+                                            onclick="spSetToken('{% url 'schools:student_set_token' school_class.pk student.pk %}', '{{ student.access_code }}')">Token ändern</button>
                                     <button type="submit" class="btn btn-secondary btn-small"
                                             formaction="{% url 'schools:student_toggle_active' school_class.pk student.pk %}">
                                         {% if student.is_active %}Deaktivieren{% else %}Aktivieren{% endif %}
@@ -129,6 +131,21 @@
         Es werden anonyme Plätze mit je einem Token erzeugt (z. B. {{ school_class.name }}-001).
     </p>
 </div>
+
+<details class="card" style="margin-top:14px;">
+    <summary style="cursor:pointer;font-weight:600;">Vorhandene Tokens importieren (z. B. Fobizz-Liste)</summary>
+    <form method="post" action="{% url 'schools:student_import' school_class.pk %}" style="margin-top:12px;" novalidate>
+        {% csrf_token %}
+        <p style="margin:0 0 6px;">
+            Zwei Excel-Spalten (Bezeichnung + Token) einfach hierher kopieren – eine Zeile pro Schüler/in.
+            Eine Spalte (nur Token) geht auch.
+        </p>
+        {{ import_form.data }}
+        <div style="margin-top:10px;">
+            <button type="submit" class="btn">Importieren</button>
+        </div>
+    </form>
+</details>
 
 {% if students %}
     <p class="muted" style="margin-top:12px;">
@@ -198,6 +215,18 @@ function spConfirmBulk(){
     var n = document.querySelectorAll('input[name=student_ids]:checked').length;
     if(n === 0){ alert('Bitte zuerst Schüler/innen auswählen (Häkchen setzen).'); return false; }
     return confirm(n + ' Schüler/in(nen) wirklich löschen?');
+}
+function spSetToken(url, current){
+    var t = prompt('Neuen Token eingeben (3–16 Kleinbuchstaben/Ziffern):', current);
+    if(t === null) return;
+    var csrf = document.querySelector('input[name=csrfmiddlewaretoken]');
+    var f = document.createElement('form');
+    f.method = 'post'; f.action = url;
+    f.innerHTML = '<input type="hidden" name="csrfmiddlewaretoken" value="' + (csrf ? csrf.value : '') + '">'
+                + '<input type="hidden" name="token">';
+    f.querySelector('input[name=token]').value = t;
+    document.body.appendChild(f);
+    f.submit();
 }
 </script>
 {% endblock %}

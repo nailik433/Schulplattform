@@ -1,6 +1,15 @@
+import re
+
 from django import forms
 
 from .models import SchoolClass, Student
+
+# A valid student token: 3–16 lowercase letters/digits.
+TOKEN_RE = re.compile(r"^[a-z0-9]{3,16}$")
+
+
+def normalize_token(raw):
+    return str(raw).strip().lower().replace(" ", "")
 
 
 class SchoolClassForm(forms.ModelForm):
@@ -67,6 +76,63 @@ class ClassDeleteConfirmForm(forms.Form):
         if value != "löschen":
             raise forms.ValidationError('Bitte genau das Wort „löschen" eingeben.')
         return value
+
+
+class StudentImportForm(forms.Form):
+    """Import students with existing tokens, e.g. pasted from two Excel columns
+    (Bezeichnung + Token)."""
+
+    data = forms.CharField(
+        label="Liste einfügen",
+        widget=forms.Textarea(
+            attrs={
+                "rows": 8,
+                "placeholder": "7b-001\ta1b2c3\n7b-002\td4e5f6\n…  (oder nur die Token-Spalte)",
+            }
+        ),
+        help_text="Eine Zeile pro Schüler/in. Zwei Spalten (Tab/Komma/Semikolon): "
+        "erste = Bezeichnung (optional), zweite = Token. Eine Spalte = nur Token.",
+    )
+
+    def clean_data(self):
+        lines = [l for l in self.cleaned_data["data"].splitlines() if l.strip()]
+        if not lines:
+            raise forms.ValidationError("Bitte mindestens eine Zeile einfügen.")
+        entries, seen, errors = [], set(), []
+        for n, line in enumerate(lines, 1):
+            parts = [p.strip() for p in re.split(r"[\t;,]", line) if p.strip()]
+            if not parts:
+                continue
+            if len(parts) == 1:
+                label, raw_token = "", parts[0]
+            else:
+                label, raw_token = parts[0], parts[-1]
+            token = normalize_token(raw_token)
+            if not TOKEN_RE.match(token):
+                errors.append(
+                    f"Zeile {n}: Token „{raw_token}“ ungültig (3–16 Kleinbuchstaben/Ziffern)."
+                )
+                continue
+            if token in seen:
+                errors.append(f"Zeile {n}: Token „{token}“ kommt doppelt vor.")
+                continue
+            seen.add(token)
+            entries.append((label[:150], token))
+        if errors:
+            raise forms.ValidationError(errors)
+        return entries
+
+
+class SetTokenForm(forms.Form):
+    token = forms.CharField(max_length=16)
+
+    def clean_token(self):
+        token = normalize_token(self.cleaned_data["token"])
+        if not TOKEN_RE.match(token):
+            raise forms.ValidationError(
+                "Token muss 3–16 Kleinbuchstaben/Ziffern sein."
+            )
+        return token
 
 
 class ShareClassForm(forms.Form):

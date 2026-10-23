@@ -48,6 +48,16 @@ urlpatterns = [
         views.student_bulk_delete,
         name="student_bulk_delete",
     ),
+    path(
+        "klasse/<int:pk>/schueler/import/",
+        views.student_import,
+        name="student_import",
+    ),
+    path(
+        "klasse/<int:pk>/schueler/<int:student_pk>/token/",
+        views.student_set_token,
+        name="student_set_token",
+    ),
     # Student area. Literal routes first, then the token catch-all.
     path("s/", views.student_login, name="student_login"),
     path("s/abmelden/", views.student_logout, name="student_logout"),
