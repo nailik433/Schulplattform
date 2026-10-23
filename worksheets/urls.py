@@ -21,6 +21,11 @@ urlpatterns = [
         views.assignment_delete,
         name="assignment_delete",
     ),
+    path(
+        "arbeitsblatt/<int:pk>/abgaben.zip",
+        views.submissions_zip,
+        name="submissions_zip",
+    ),
     path("datei/<int:file_pk>/", views.file_download, name="file_download"),
     path("datei/<int:file_pk>/loeschen/", views.file_delete, name="file_delete"),
     # Submissions

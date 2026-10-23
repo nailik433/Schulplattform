@@ -40,10 +40,11 @@ lassen → Schüler laden ihr Ergebnis hoch → Lehrer lädt **alle „Lösungen
 einmal** herunter (ein Ordner mit z. B. 25 Abgaben) → dieser Ordner wird in
 einem Claude-Chat freigegeben → Claude schreibt **Bewertungen**, vergibt
 **Punkte anhand der Aufgaben** und zeigt, inwieweit die Aufgaben erreicht wurden.
-- (Lehrer-Login + Abgabe-Übersicht je Arbeitsblatt existieren. **Neu und
-  zentral:** Button „Alle Abgaben herunterladen" als **ZIP** (pro Arbeitsblatt
-  bzw. Klasse) – genau das ermöglicht den Claude-Bewertungs-Workflow.
-  Zusätzlich: Lernfortschritts-Übersicht pro Klasse.)
+- (Lehrer-Login + Abgabe-Übersicht je Arbeitsblatt existieren.
+  ✅ **ZIP-Download umgesetzt:** Button „Alle Abgaben (ZIP)" auf der
+  Arbeitsblatt-Seite. Pro Schüler/in ein Ordner (z. B. `7b-001/`) – genau
+  das ermöglicht den Claude-Bewertungs-Workflow mit allen Abgaben auf einmal.
+  Noch offen: Lernfortschritts-Übersicht pro Klasse.)
 
 ---
 _Reihenfolge-Vorschlag für morgen: erst Server live (DNS + Deploy), dann

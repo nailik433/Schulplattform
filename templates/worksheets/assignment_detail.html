@@ -47,7 +47,16 @@
 </div>
 
 {% if assignment.collect_submissions %}
-    <h2>Abgaben <span class="muted" style="font-weight:400;">({{ submitted_count }}/{{ roster_count }})</span></h2>
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+        <h2 style="margin-bottom:0;">Abgaben <span class="muted" style="font-weight:400;">({{ submitted_count }}/{{ roster_count }})</span></h2>
+        {% if submitted_count %}
+            <a class="btn btn-small" href="{% url 'worksheets:submissions_zip' assignment.pk %}">⬇️ Alle Abgaben (ZIP)</a>
+        {% endif %}
+    </div>
+    <p class="muted" style="margin-top:6px;">
+        Im ZIP liegt pro Schüler/in ein Ordner (z. B. <code>{{ assignment.school_class.name }}-001/</code>) –
+        ideal zum Hochladen in einen Claude-Chat für Bewertung und Punkte.
+    </p>
     <div class="card" style="padding:0;overflow-x:auto;">
         <table class="data">
             <thead>

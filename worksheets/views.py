@@ -1,7 +1,12 @@
+import io
+import re
+import zipfile
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import FileResponse, Http404
+from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.text import slugify
 from django.views.decorators.http import require_POST
 
 from schools.models import ClassMembership, SchoolClass
@@ -48,6 +53,19 @@ def _save_uploaded_files(assignment, files):
     for upload in files:
         if upload:
             AssignmentFile.objects.create(assignment=assignment, file=upload)
+
+
+def _safe_name(value):
+    """Make a string safe to use inside a ZIP entry or download filename.
+
+    Keeps letters, digits, umlauts and a few harmless separators; removes
+    path separators and control characters so a crafted original filename
+    can never escape its folder in the archive.
+    """
+    value = (value or "").strip().replace("/", "-").replace("\\", "-")
+    value = re.sub(r"[\x00-\x1f]", "", value)
+    value = re.sub(r"[^0-9A-Za-zäöüÄÖÜß ._-]", "_", value)
+    return value.strip(" .") or "datei"
 
 
 # --------------------------------------------------------------------------
@@ -137,6 +155,68 @@ def assignment_delete(request, pk):
     assignment.delete()
     messages.success(request, f"Arbeitsblatt „{title}“ wurde gelöscht.")
     return redirect(school_class.get_absolute_url())
+
+
+@login_required
+def submissions_zip(request, pk):
+    """Download every submitted file of an assignment as one ZIP.
+
+    Each student's files land in their own folder named by the anonymous
+    seat label (e.g. ``7b-001/``), so the archive can be handed straight to
+    a grading workflow without exposing names. Only teachers of the class
+    may download it.
+    """
+    assignment = _teacher_assignment_or_404(request.user, pk)
+    submissions = (
+        assignment.submissions.select_related("student")
+        .prefetch_related("files")
+        .order_by("student__number")
+    )
+
+    buffer = io.BytesIO()
+    file_count = 0
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        for submission in submissions:
+            student = submission.student
+            folder = _safe_name(
+                student.seat_label or f"schueler-{student.number or student.id}"
+            )
+            used = set()
+            for sf in submission.files.all():
+                try:
+                    handle = sf.file.open("rb")
+                except FileNotFoundError:
+                    continue
+                try:
+                    data = handle.read()
+                finally:
+                    handle.close()
+                name = _safe_name(sf.original_name)
+                arcname = f"{folder}/{name}"
+                counter = 1
+                while arcname in used:
+                    stem, dot, ext = name.rpartition(".")
+                    if dot:
+                        arcname = f"{folder}/{stem}_{counter}.{ext}"
+                    else:
+                        arcname = f"{folder}/{name}_{counter}"
+                    counter += 1
+                used.add(arcname)
+                zf.writestr(arcname, data)
+                file_count += 1
+
+    if file_count == 0:
+        messages.info(
+            request, "Es gibt noch keine abgegebenen Dateien zum Herunterladen."
+        )
+        return redirect(assignment.get_absolute_url())
+
+    buffer.seek(0)
+    stem = slugify(f"{assignment.school_class.name}-{assignment.title}") or "abgaben"
+    zip_name = f"{stem}-abgaben.zip"
+    response = HttpResponse(buffer.getvalue(), content_type="application/zip")
+    response["Content-Disposition"] = f'attachment; filename="{zip_name}"'
+    return response
 
 
 @login_required

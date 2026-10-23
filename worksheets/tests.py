@@ -225,6 +225,52 @@ class WorksheetTests(TestCase):
         )
         self.assertEqual(dl.status_code, 200)
 
+    def test_teacher_downloads_all_submissions_as_zip(self):
+        import io
+        import zipfile
+
+        assignment = Assignment.objects.create(
+            school_class=self.school_class, title="Word üben", created_by=self.teacher
+        )
+        ben = Student.objects.create(school_class=self.school_class, display_name="Ben")
+        self._submit_as(assignment, self.student)  # 8a-001 (Anna)
+        self._submit_as(assignment, ben)           # 8a-002 (Ben)
+
+        self.client.force_login(self.teacher)
+        response = self.client.get(
+            reverse("worksheets:submissions_zip", args=[assignment.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/zip")
+        with zipfile.ZipFile(io.BytesIO(response.content)) as zf:
+            names = set(zf.namelist())
+            # One folder per student, named by the anonymous seat label.
+            self.assertIn("8a-001/loesung.pdf", names)
+            self.assertIn("8a-002/loesung.pdf", names)
+            self.assertEqual(zf.read("8a-001/loesung.pdf"), b"meine loesung")
+
+    def test_zip_empty_redirects(self):
+        assignment = Assignment.objects.create(
+            school_class=self.school_class, title="Leer", created_by=self.teacher
+        )
+        self.client.force_login(self.teacher)
+        response = self.client.get(
+            reverse("worksheets:submissions_zip", args=[assignment.pk])
+        )
+        self.assertEqual(response.status_code, 302)
+
+    def test_non_member_teacher_cannot_download_zip(self):
+        assignment = Assignment.objects.create(
+            school_class=self.school_class, title="AB", created_by=self.teacher
+        )
+        self._submit_as(assignment, self.student)
+        other = make_teacher("fremd@example.com")
+        self.client.force_login(other)
+        response = self.client.get(
+            reverse("worksheets:submissions_zip", args=[assignment.pk])
+        )
+        self.assertEqual(response.status_code, 404)
+
     def test_student_downloads_own_but_not_others_submission(self):
         assignment = Assignment.objects.create(
             school_class=self.school_class, title="AB", created_by=self.teacher
