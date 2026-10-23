@@ -82,6 +82,13 @@ unter `hebid.de` live.
       ```bash
       bash scripts/install-cron.sh
       ```
+- [ ] **E-Mail-Versand einrichten** (sonst landen Passwort-Reset- und
+      Einladungs-Mails nur im Server-Log). SMTP-Zugangsdaten vom Anbieter
+      bereithalten (IONOS: `smtp.ionos.de`, Port 587), dann:
+      ```bash
+      bash scripts/configure-email.sh
+      ```
+      Das Skript fragt alles ab und schickt auf Wunsch eine Test-Mail.
 
 ---
 

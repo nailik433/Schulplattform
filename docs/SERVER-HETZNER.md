@@ -128,7 +128,8 @@ docker run --rm python:3.11-slim python -c "import secrets; print(secrets.token_
 
 > E-Mail (für Einladungs- und Passwort-Links): ohne SMTP-Angaben werden Mails
 > nur ins Server-Log geschrieben – die Einladungslinks stehen aber auch im
-> Admin. Für echten Versand die `DJANGO_EMAIL_*`-Werte setzen.
+> Admin. Für echten Versand später einfach `bash scripts/configure-email.sh`
+> ausführen (fragt die SMTP-Daten ab und verschickt eine Test-Mail).
 
 ## 7. Starten
 
