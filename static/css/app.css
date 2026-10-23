@@ -337,6 +337,18 @@ body.player { background: var(--surface); overflow: hidden; }
     height: calc(100vh - 52px); height: calc(100dvh - 52px);
 }
 
+/* ---- Progress matrix (teacher) ---- */
+.progress-table th, .progress-table td { white-space: nowrap; }
+.progress-table th.col-title { white-space: normal; min-width: 120px; max-width: 180px; text-transform: none; letter-spacing: 0; font-size: 0.82rem; }
+.progress-table th.col-title a { color: inherit; text-decoration: none; }
+.progress-table th.col-title a:hover { color: var(--primary); }
+.progress-table .sticky { position: sticky; left: 0; background: var(--surface); z-index: 1; box-shadow: 1px 0 0 var(--border-soft); }
+.progress-table .cell-open { color: var(--border); }
+.progress-table tfoot td { color: var(--muted); font-size: 0.82rem; border-top: 1px solid var(--border-soft); }
+.bar { display: inline-block; vertical-align: middle; width: 90px; height: 8px; background: var(--surface-2); border-radius: 999px; overflow: hidden; margin-right: 8px; }
+.bar > span { display: block; height: 100%; background: var(--success-ink); border-radius: 999px; }
+.bar.low > span { background: var(--warn-ink); }
+
 /* ---- Dark mode: follows the system setting (iPadOS/macOS/Windows) ---- */
 @media (prefers-color-scheme: dark) {
     :root {

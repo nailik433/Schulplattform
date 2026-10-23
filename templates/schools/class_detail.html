@@ -15,6 +15,7 @@
     </div>
     <div class="actions-cell">
         {% if students %}
+            <a class="btn btn-secondary" href="{% url 'schools:class_progress' school_class.pk %}">📊 Lernfortschritt</a>
             <a class="btn" href="{% url 'schools:class_qr_document' school_class.pk %}" target="_blank">
                 🖨️ QR-Dokument drucken
             </a>

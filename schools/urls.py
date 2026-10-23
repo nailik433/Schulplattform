@@ -11,6 +11,7 @@ urlpatterns = [
     path("klasse/<int:pk>/", views.class_detail, name="class_detail"),
     path("klasse/<int:pk>/loeschen/", views.class_delete, name="class_delete"),
     path("klasse/<int:pk>/qr/", views.class_qr_document, name="class_qr_document"),
+    path("klasse/<int:pk>/fortschritt/", views.class_progress, name="class_progress"),
     path("klasse/<int:pk>/freigabe/", views.class_share_add, name="class_share_add"),
     path(
         "klasse/<int:pk>/freigabe/<int:teacher_pk>/entfernen/",

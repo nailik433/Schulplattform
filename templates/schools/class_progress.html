@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Lernfortschritt {{ school_class.name }}{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{% url 'schools:class_detail' school_class.pk %}">← {{ school_class.name }}</a>
+
+<div class="page-head">
+    <div>
+        <h1>📊 Lernfortschritt</h1>
+        <p class="subtitle">
+            {{ school_class.name }}{% if school_class.subject %} · {{ school_class.subject }}{% endif %}
+            · {{ student_count }} aktive Schüler/innen · {{ columns|length }} Aufgaben
+        </p>
+    </div>
+    <div class="actions-cell">
+        {% if class_percent is not None %}
+            {% if class_percent >= 80 %}<span class="chip chip-ok">Ø {{ class_percent }} % erledigt</span>
+            {% elif class_percent >= 50 %}<span class="chip chip-warn">Ø {{ class_percent }} % erledigt</span>
+            {% else %}<span class="chip chip-danger">Ø {{ class_percent }} % erledigt</span>{% endif %}
+        {% endif %}
+        {% if rows and columns %}
+            <a class="btn btn-secondary" href="?format=csv">⬇️ Als CSV (Excel)</a>
+        {% endif %}
+    </div>
+</div>
+
+{% if not columns %}
+    <div class="card empty-state">
+        <div class="empty-icon">📊</div>
+        <p class="muted" style="margin:0;">Noch nichts zu messen – lege eine Lernumgebung an oder teile ein Arbeitsblatt mit Abgabe aus.</p>
+    </div>
+{% elif not rows %}
+    <div class="card empty-state">
+        <div class="empty-icon">👩‍🎓</div>
+        <p class="muted" style="margin:0;">Noch keine aktiven Schüler/innen in dieser Klasse.</p>
+    </div>
+{% else %}
+    <div class="card" style="padding:0;overflow-x:auto;">
+        <table class="data progress-table">
+            <thead>
+                <tr>
+                    <th class="sticky">Kennung</th>
+                    {% for col in columns %}
+                        <th class="col-title">
+                            {% if col.kind == "lesson" %}
+                                <a href="{{ col.obj.get_absolute_url }}" title="Lernumgebung">🧪 {{ col.obj.title }}</a>
+                            {% else %}
+                                <a href="{{ col.obj.get_absolute_url }}" title="Arbeitsblatt mit Abgabe">📄 {{ col.obj.title }}</a>
+                                {% if col.obj.due_date %}<div class="muted" style="font-weight:400;">bis {{ col.obj.due_date|date:"d.m." }}</div>{% endif %}
+                            {% endif %}
+                        </th>
+                    {% endfor %}
+                    <th>Erledigt</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                    <tr>
+                        <td class="sticky">
+                            <strong>{{ row.student.seat_label }}</strong>
+                            {% if row.student.display_name %}<div class="muted" style="font-size:.82rem;">{{ row.student.display_name }}</div>{% endif %}
+                        </td>
+                        {% for cell in row.cells %}
+                            <td>
+                                {% if cell.state == "done" %}<span class="chip chip-ok">{{ cell.text }}</span>
+                                {% elif cell.state == "late" %}<span class="chip chip-warn">{{ cell.text }}</span>
+                                {% elif cell.state == "started" %}<span class="chip chip-info">{{ cell.text }}</span>
+                                {% elif cell.state == "overdue" %}<span class="chip chip-danger">{{ cell.text }}</span>
+                                {% else %}<span class="cell-open">{{ cell.text }}</span>{% endif %}
+                            </td>
+                        {% endfor %}
+                        <td>
+                            <span class="bar{% if row.percent < 50 %} low{% endif %}"><span style="width:{{ row.percent }}%;"></span></span>
+                            <span class="muted">{{ row.done }}/{{ row.total }}</span>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td class="sticky">Fertig</td>
+                    {% for col in columns %}
+                        <td>{{ col.done }}/{{ student_count }}</td>
+                    {% endfor %}
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    <p class="muted">
+        ✓ = erledigt bzw. abgegeben · Punkte bei Lernumgebungen mit Bewertung · „fehlt" = Frist vorbei, keine Abgabe.
+        Die CSV lässt sich direkt in Excel öffnen (Semikolon-getrennt).
+    </p>
+{% endif %}
+{% endblock %}

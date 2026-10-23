@@ -1,13 +1,17 @@
 from datetime import timedelta
 
 from django.conf import settings
+import csv
+
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Count, Q
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.utils.text import slugify
 from django.views.decorators.http import require_POST
 
 from accounts.throttling import client_ip, is_blocked, register_failure, reset
@@ -213,6 +217,110 @@ def class_detail(request, pk):
         "share_form": ShareClassForm(),
     }
     return render(request, "schools/class_detail.html", context)
+
+
+@login_required
+def class_progress(request, pk):
+    """Learning-progress matrix for a class: one row per active pupil, one
+    column per lesson and per assignment that collects submissions. Also
+    available as CSV (``?format=csv``) for Excel / grading."""
+    from lessons.models import LessonResult
+    from worksheets.models import Submission
+
+    school_class = _get_teacher_class(request.user, pk)
+    students = list(school_class.students.filter(is_active=True))
+    lessons = list(school_class.lessons.order_by("created_at"))
+    assignments = list(
+        school_class.assignments.filter(collect_submissions=True).order_by("created_at")
+    )
+    results = {
+        (r.lesson_id, r.student_id): r
+        for r in LessonResult.objects.filter(lesson__in=lessons)
+    }
+    submissions = {
+        (sub.assignment_id, sub.student_id): sub
+        for sub in Submission.objects.filter(assignment__in=assignments).select_related("assignment")
+    }
+    now = timezone.now()
+
+    columns = [{"kind": "lesson", "obj": lesson, "done": 0} for lesson in lessons]
+    columns += [{"kind": "assignment", "obj": a, "done": 0} for a in assignments]
+
+    rows = []
+    for student in students:
+        cells, done = [], 0
+        for col in columns:
+            if col["kind"] == "lesson":
+                result = results.get((col["obj"].id, student.id))
+                if result and result.completed:
+                    text = "✓"
+                    if result.max_score:
+                        text = f"{(result.score or 0):g}/{result.max_score:g}"
+                    cell = {"state": "done", "text": text, "percent": result.percent}
+                    done += 1
+                    col["done"] += 1
+                elif result:
+                    cell = {"state": "started", "text": "geöffnet"}
+                else:
+                    cell = {"state": "open", "text": "–"}
+            else:
+                sub = submissions.get((col["obj"].id, student.id))
+                if sub:
+                    late = sub.is_late
+                    cell = {"state": "late" if late else "done", "text": "verspätet" if late else "✓"}
+                    done += 1
+                    col["done"] += 1
+                elif col["obj"].due_date and col["obj"].due_date < now:
+                    cell = {"state": "overdue", "text": "fehlt"}
+                else:
+                    cell = {"state": "open", "text": "–"}
+            cells.append(cell)
+        total = len(columns)
+        rows.append(
+            {
+                "student": student,
+                "cells": cells,
+                "done": done,
+                "total": total,
+                "percent": round(100 * done / total) if total else None,
+            }
+        )
+
+    class_percent = None
+    if rows and columns:
+        class_percent = round(sum(r["percent"] for r in rows) / len(rows))
+
+    if request.GET.get("format") == "csv":
+        response = HttpResponse(content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = (
+            f'attachment; filename="{slugify(school_class.name)}-lernfortschritt.csv"'
+        )
+        response.write("\ufeff")  # BOM so Excel opens UTF-8 correctly
+        writer = csv.writer(response, delimiter=";")
+        header = ["Kennung", "Name"]
+        header += [
+            ("LU: " if c["kind"] == "lesson" else "AB: ") + c["obj"].title for c in columns
+        ]
+        header += ["Erledigt", "Gesamt", "Prozent"]
+        writer.writerow(header)
+        for row in rows:
+            line = [row["student"].seat_label, row["student"].display_name]
+            line += [c["text"] for c in row["cells"]]
+            line += [row["done"], row["total"], row["percent"] if row["percent"] is not None else ""]
+            writer.writerow(line)
+        return response
+
+    return render(
+        request,
+        "schools/class_progress.html",
+        {
+            "school_class": school_class,
+            "columns": columns,
+            "rows": rows,
+            "student_count": len(students),
+            "class_percent": class_percent,
+        },
+    )
 
 
 @login_required

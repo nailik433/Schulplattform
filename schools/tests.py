@@ -562,3 +562,54 @@ class StudentImportTests(TestCase):
         )
         b.refresh_from_db()
         self.assertNotEqual(b.access_code, "aaa111")
+
+
+class ClassProgressTests(TestCase):
+    def setUp(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from lessons.models import Lesson, LessonResult
+        from worksheets.models import Assignment, Submission
+
+        self.teacher = make_teacher("prog@example.com")
+        self.school_class = make_class(self.teacher, name="7b")
+        self.s1 = Student.objects.create(school_class=self.school_class, display_name="Anna")
+        self.s2 = Student.objects.create(school_class=self.school_class)
+        lesson = Lesson.objects.create(school_class=self.school_class, title="Bit-Labor", html="<p>x</p>")
+        LessonResult.objects.create(lesson=lesson, student=self.s1, score=8, max_score=10, completed=True)
+        LessonResult.objects.create(lesson=lesson, student=self.s2)  # only opened
+        overdue = Assignment.objects.create(
+            school_class=self.school_class, title="Steckbrief",
+            due_date=timezone.now() - timedelta(days=1),
+        )
+        Assignment.objects.create(school_class=self.school_class, title="Nur Material", collect_submissions=False)
+        Submission.objects.create(assignment=overdue, student=self.s2)
+        self.url = reverse("schools:class_progress", args=[self.school_class.pk])
+
+    def test_matrix_states_and_percentages(self):
+        self.client.force_login(self.teacher)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Lernfortschritt")
+        # Material-only assignments are not a column.
+        self.assertEqual([c["obj"].title for c in response.context["columns"]], ["Bit-Labor", "Steckbrief"])
+        rows = {r["student"].pk: r for r in response.context["rows"]}
+        self.assertEqual([c["state"] for c in rows[self.s1.pk]["cells"]], ["done", "overdue"])
+        self.assertEqual(rows[self.s1.pk]["cells"][0]["text"], "8/10")
+        self.assertEqual([c["state"] for c in rows[self.s2.pk]["cells"]], ["started", "late"])
+        self.assertEqual(rows[self.s1.pk]["percent"], 50)
+        self.assertEqual(response.context["class_percent"], 50)
+
+    def test_csv_export(self):
+        self.client.force_login(self.teacher)
+        response = self.client.get(self.url + "?format=csv")
+        self.assertEqual(response["Content-Type"], "text/csv; charset=utf-8")
+        body = response.content.decode("utf-8-sig")
+        self.assertIn("Kennung;Name;LU: Bit-Labor;AB: Steckbrief;Erledigt;Gesamt;Prozent", body)
+        self.assertIn("7b-001;Anna;8/10;fehlt;1;2;50", body)
+
+    def test_non_member_cannot_see_progress(self):
+        self.client.force_login(make_teacher("fremd2@example.com"))
+        self.assertEqual(self.client.get(self.url).status_code, 404)
