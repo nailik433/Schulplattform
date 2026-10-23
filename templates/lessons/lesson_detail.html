@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}{{ lesson.title }}{% endblock %}
+
+{% block content %}
+<p class="muted"><a href="{% url 'schools:class_detail' lesson.school_class.pk %}">← {{ lesson.school_class.name }}</a></p>
+
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+    <h1>{{ lesson.title }}</h1>
+    <div class="actions-cell">
+        <a class="btn btn-secondary btn-small" href="{% url 'lessons:lesson_edit' lesson.pk %}">Bearbeiten</a>
+        <form class="inline-form" method="post" action="{% url 'lessons:lesson_delete' lesson.pk %}"
+              onsubmit="return confirm('Lernumgebung „{{ lesson.title|escapejs }}“ wirklich löschen?');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger btn-small">Löschen</button>
+        </form>
+    </div>
+</div>
+
+<div class="card" style="padding:0;overflow:hidden;">
+    <div style="padding:10px 16px;border-bottom:1px solid var(--border-soft);" class="muted">Vorschau</div>
+    <iframe src="{% url 'lessons:lesson_preview' lesson.pk %}" sandbox="allow-scripts allow-forms allow-popups"
+            style="width:100%;height:520px;border:0;display:block;background:#fff;"></iframe>
+</div>
+
+<p class="muted">
+    Schüler/innen öffnen diese Lernumgebung nach dem Login auf ihrer Startseite.
+</p>
+
+<h2>Ergebnisse <span class="muted" style="font-weight:400;">({{ done_count }}/{{ roster_count }} fertig)</span></h2>
+<div class="card" style="padding:0;overflow-x:auto;">
+    <table class="data">
+        <thead>
+            <tr><th>Kennung</th><th>Status</th><th>Punkte</th></tr>
+        </thead>
+        <tbody>
+            {% for row in roster %}
+                <tr>
+                    <td>{{ lesson.school_class.name }}-{{ row.student.number_padded }}</td>
+                    <td>
+                        {% if row.result and row.result.completed %}
+                            <span class="badge">fertig · {{ row.result.updated_at|date:"d.m.Y H:i" }}</span>
+                        {% elif row.result %}
+                            <span class="badge inactive">geöffnet</span>
+                        {% else %}
+                            <span class="muted">offen</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if row.result and row.result.max_score %}
+                            {{ row.result.score|floatformat:"-2" }} / {{ row.result.max_score|floatformat:"-2" }}
+                            {% if row.result.percent is not None %}({{ row.result.percent }} %){% endif %}
+                        {% else %}
+                            <span class="muted">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

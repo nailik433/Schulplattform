@@ -10,8 +10,9 @@ def generate_api_key():
 
 
 class Lesson(models.Model):
-    """An interactive learning environment: an ordered list of content/question
-    blocks stored as JSON (see lessons.grading for the schema)."""
+    """An interactive learning environment: a complete, self-contained HTML
+    document (with its own CSS/JS/animations), authored by a teacher or by an
+    AI via the API. Shown to students inside a sandboxed iframe."""
 
     school_class = models.ForeignKey(
         "schools.SchoolClass",
@@ -19,9 +20,7 @@ class Lesson(models.Model):
         related_name="lessons",
     )
     title = models.CharField("Titel", max_length=200)
-    intro = models.TextField("Einleitung", blank=True)
-    content = models.JSONField("Inhalt (Blöcke)", default=list)
-    due_date = models.DateTimeField("Abgabe bis", null=True, blank=True)
+    html = models.TextField("HTML-Inhalt", blank=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -43,45 +42,31 @@ class Lesson(models.Model):
     def get_absolute_url(self):
         return reverse("lessons:lesson_detail", args=[self.pk])
 
-    @property
-    def max_points(self):
-        from .grading import content_max_points
 
-        return content_max_points(self.content)
-
-    @property
-    def question_count(self):
-        from .grading import GRADABLE_TYPES
-
-        return sum(
-            1 for b in self.content if isinstance(b, dict) and b.get("type") in GRADABLE_TYPES
-        )
-
-
-class LessonAttempt(models.Model):
-    """A student's submission for a lesson (one per student & lesson; a new
-    submission overwrites the previous)."""
+class LessonResult(models.Model):
+    """A student's result for a lesson. Written when the lesson's HTML reports
+    a score back to the platform (via postMessage), or when it is opened."""
 
     lesson = models.ForeignKey(
-        Lesson, on_delete=models.CASCADE, related_name="attempts"
+        Lesson, on_delete=models.CASCADE, related_name="results"
     )
     student = models.ForeignKey(
-        "schools.Student", on_delete=models.CASCADE, related_name="lesson_attempts"
+        "schools.Student", on_delete=models.CASCADE, related_name="lesson_results"
     )
-    answers = models.JSONField(default=dict)
-    results = models.JSONField(default=dict)
-    score = models.FloatField(default=0)
-    max_score = models.FloatField(default=0)
-    created_at = models.DateTimeField(auto_now_add=True)
+    score = models.FloatField(null=True, blank=True)
+    max_score = models.FloatField(null=True, blank=True)
+    completed = models.BooleanField(default=False)
+    detail = models.JSONField(default=dict, blank=True)
+    opened_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = "Lösung (Lernumgebung)"
-        verbose_name_plural = "Lösungen (Lernumgebungen)"
+        verbose_name = "Ergebnis (Lernumgebung)"
+        verbose_name_plural = "Ergebnisse (Lernumgebungen)"
         ordering = ["student__number"]
         constraints = [
             models.UniqueConstraint(
-                fields=["lesson", "student"], name="unique_attempt_per_student"
+                fields=["lesson", "student"], name="unique_result_per_student"
             )
         ]
 
@@ -91,20 +76,22 @@ class LessonAttempt(models.Model):
     @property
     def percent(self):
         if not self.max_score:
-            return 0
-        return round(100 * self.score / self.max_score)
+            return None
+        return round(100 * (self.score or 0) / self.max_score)
 
 
 class ApiKey(models.Model):
-    """An API key a teacher uses so an external assistant can create lessons
-    in their classes via the HTTP API — without access to the source code."""
+    """Lets an external assistant (e.g. a Claude chat) create lessons in the
+    teacher's classes through the HTTP API — without source-code access."""
 
     teacher = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="api_keys",
     )
-    key = models.CharField(max_length=80, unique=True, default=generate_api_key, editable=False)
+    key = models.CharField(
+        max_length=80, unique=True, default=generate_api_key, editable=False
+    )
     label = models.CharField(max_length=100, default="Standard")
     created_at = models.DateTimeField(auto_now_add=True)
     last_used_at = models.DateTimeField(null=True, blank=True)

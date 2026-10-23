@@ -12,6 +12,17 @@
     </p>
 </div>
 
+{% if lessons %}
+<h2>Lernumgebungen</h2>
+{% for lesson in lessons %}
+    <a class="card" style="display:block;text-decoration:none;color:inherit;"
+       href="{% url 'lessons:lesson_play' lesson.pk %}">
+        <strong>🧪 {{ lesson.title }}</strong>
+        <div class="muted" style="margin-top:4px;">Zum Öffnen tippen</div>
+    </a>
+{% endfor %}
+{% endif %}
+
 <h2>Deine Arbeitsblätter</h2>
 {% if rows %}
     {% for row in rows %}

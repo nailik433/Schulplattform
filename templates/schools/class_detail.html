@@ -57,6 +57,31 @@
     {% endif %}
 {% endwith %}
 
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-top:28px;">
+    <h2 style="margin:0;">Lernumgebungen</h2>
+    <a class="btn" href="{% url 'lessons:lesson_create' school_class.pk %}">+ Lernumgebung</a>
+</div>
+{% with lessons=school_class.lessons.all %}
+    {% if lessons %}
+        <div class="card" style="padding:0;overflow-x:auto;">
+            <table class="data">
+                <thead><tr><th>Titel</th><th>Erstellt</th></tr></thead>
+                <tbody>
+                    {% for l in lessons %}
+                        <tr>
+                            <td><a href="{{ l.get_absolute_url }}">{{ l.title }}</a></td>
+                            <td class="muted">{{ l.created_at|date:"d.m.Y" }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="card"><p class="muted">Noch keine Lernumgebungen.
+            <a href="{% url 'lessons:api_key' %}">KI-Prompt &amp; API</a> ansehen, um welche von Claude bauen zu lassen.</p></div>
+    {% endif %}
+{% endwith %}
+
 <h2>Schüler/innen &amp; Tokens</h2>
 {% if students %}
     <form method="post">

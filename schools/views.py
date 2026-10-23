@@ -550,10 +550,11 @@ def student_space(request, token):
     rows = [
         {"assignment": a, "submission": my_subs.get(a.id)} for a in assignments
     ]
+    lessons = student.school_class.lessons.all()
     return render(
         request,
         "students/home.html",
-        {"student": student, "rows": rows},
+        {"student": student, "rows": rows, "lessons": lessons},
     )
 
 

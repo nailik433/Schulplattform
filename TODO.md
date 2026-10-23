@@ -14,11 +14,11 @@ nur zur Orientierung, die Wünsche darüber sind maßgeblich.)
 ## Feature-Wünsche
 
 ### 1. Schnittstelle zur Erstellung digitaler Lernumgebungen per KI
-Eine API/Schnittstelle, über die (z. B. aus einem separaten Claude-Chat)
-neue Lernumgebungen/Klassen/Arbeitsblätter erstellt werden können – **ohne**
-Zugriff auf den Quellcode der Seite.
-- (Neu zu bauen. Entspricht der besprochenen „Inhalts-API mit Schlüssel":
-  trennt Inhalt-Erstellen sauber vom Code-Ändern.)
+✅ **Umgesetzt.** App `lessons`: interaktive Lernumgebungen als vollständige,
+sandboxed-angezeigte HTML-Seiten (mit Animationen); Erstellung per Einfügen
+oder per **API mit Schlüssel** (KI-Schnittstelle). Ergebnis-Rückmeldung der
+HTML an die Plattform via postMessage; Lehrer-Ergebnisübersicht. Prompt + API
+unter „KI-Prompt & API" im Dashboard.
 
 ### 2. Abgaben für Schüler
 Schüler können etwas hochladen (z. B. ein Foto) **bis zu einem Datum X**.

@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}API & KI-Prompt{% endblock %}
+
+{% block content %}
+<p class="muted"><a href="{% url 'schools:dashboard' %}">← Meine Klassen</a></p>
+
+<h1>KI-Schnittstelle & Prompt</h1>
+<p class="subtitle">
+    So lässt du dir von Claude interaktive, animierte Lernumgebungen bauen und
+    bringst sie in die Plattform.
+</p>
+
+<div class="card">
+    <h2 style="margin-top:0;">1. Lernumgebung von Claude bauen lassen</h2>
+    <p class="muted">Kopiere diesen Prompt in einen Claude-Chat und ersetze [BESCHREIBUNG].</p>
+    <textarea id="ki-prompt" readonly rows="16"
+        style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:0.85rem;">Baue eine interaktive, animierte Lernumgebung als EINE vollständige, in sich geschlossene HTML-Datei.
+
+Vorgaben:
+- Beginne mit <!DOCTYPE html>; alles inline (CSS in <style>, JS in <script>), keine lokalen Dateien. Externe Skripte/Fonts nur per CDN (optional).
+- Optimiert fürs iPad: responsiv, große Tap-Ziele, Touch-freundlich, elegantes, ruhiges Design.
+- Inhalt: Erklärungen + Animationen (CSS/SVG/Canvas) + interaktive Aufgaben (z. B. Single/Multiple Choice, Zuordnung, Schieberegler-Experimente) mit direktem Feedback.
+- Keine echten Namen oder personenbezogenen Daten abfragen.
+- Wenn der/die Schüler/in fertig ist bzw. Punkte erreicht hat, melde das Ergebnis an die Plattform:
+    window.parent.postMessage({type:'lesson_result', score: ERREICHTE_PUNKTE, max: MAX_PUNKTE, completed:true}, '*');
+- Gib am Ende NUR den vollständigen HTML-Code aus (ohne Erklärtext drumherum).
+
+Thema / Beschreibung:
+[BESCHREIBUNG]</textarea>
+    <div class="form-actions">
+        <button type="button" class="btn btn-secondary btn-small" onclick="copyText('ki-prompt', this)">Prompt kopieren</button>
+    </div>
+</div>
+
+<div class="card">
+    <h2 style="margin-top:0;">2. In die Plattform bringen</h2>
+    <p>
+        <strong>Einfachster Weg:</strong> Claudes HTML-Ausgabe kopieren → in einer Klasse auf
+        <em>„+ Lernumgebung"</em> → HTML einfügen → Erstellen. Fertig.
+    </p>
+    <p class="muted">
+        Oder automatisch über die API (für Fortgeschrittene) – siehe unten.
+    </p>
+</div>
+
+<div class="card">
+    <h2 style="margin-top:0;">3. API (optional, automatisiert)</h2>
+    <p>Dein API-Schlüssel (geheim halten!):</p>
+    <p><input id="api-key" type="text" readonly value="{{ api_key.key }}"
+             style="font-family:ui-monospace,Menlo,Consolas,monospace;"></p>
+    <div class="form-actions" style="margin-bottom:14px;">
+        <button type="button" class="btn btn-secondary btn-small" onclick="copyText('api-key', this)">Schlüssel kopieren</button>
+        <form class="inline-form" method="post"
+              onsubmit="return confirm('Neuen Schlüssel erzeugen? Der alte wird ungültig.');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger btn-small">Neu erzeugen</button>
+        </form>
+    </div>
+    <p class="muted">Basis-URL: <code>{{ base_url }}</code></p>
+    <pre style="background:var(--surface-2);padding:14px;border-radius:12px;overflow:auto;font-size:0.82rem;">
+# Klassen (mit IDs) abrufen:
+curl -H "X-API-Key: {{ api_key.key }}" {{ base_url }}/api/classes
+
+# Lernumgebung anlegen:
+curl -X POST {{ base_url }}/api/lessons \
+  -H "X-API-Key: {{ api_key.key }}" \
+  -H "Content-Type: application/json" \
+  -d '{"class_id": 1, "title": "Magnetismus", "html": "&lt;!DOCTYPE html&gt;..."}'</pre>
+</div>
+
+<script>
+function copyText(id, btn){
+    var el = document.getElementById(id);
+    el.select(); el.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(el.value).then(function(){
+        var old = btn.textContent; btn.textContent = 'Kopiert ✓';
+        setTimeout(function(){ btn.textContent = old; }, 1500);
+    });
+}
+</script>
+{% endblock %}
