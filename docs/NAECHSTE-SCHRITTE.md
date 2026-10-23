@@ -90,22 +90,36 @@ tippen. Weder du noch ich brauchen dafür dauerhaften Serverzugriff.
 **Wie:** Ein GitHub-Actions-Workflow loggt sich nach einem Merge nach `main`
 automatisch per Deploy-Schlüssel auf dem Server ein und führt das Update aus.
 
-- [ ] Mir im Chat sagen: „Bau mir das Auto-Deploy." → Ich lege die
-      Workflow-Datei an und schreibe dir eine kurze Anleitung.
-- [ ] Du hinterlegst dann **3 GitHub-Secrets** (Server-IP, SSH-Benutzer,
-      Deploy-Schlüssel) – ich sage dir genau, wie. Einmalig ~10 Minuten.
-- [ ] Einen Test-Merge machen und schauen, ob der Server von allein aktualisiert.
+**Status:** Der Workflow ist schon gebaut (`.github/workflows/deploy.yml`),
+die Anleitung steht in [`docs/AUTO-DEPLOY.md`](./AUTO-DEPLOY.md).
+
+- [ ] Deploy-Schlüssel auf dem Mac erzeugen und auf dem Server erlauben
+      (Schritte 1–2 in AUTO-DEPLOY.md).
+- [ ] **4 GitHub-Secrets** hinterlegen: `DEPLOY_HOST`, `DEPLOY_USER`,
+      `DEPLOY_PATH`, `DEPLOY_SSH_KEY` (Schritt 3).
+- [ ] In GitHub unter **Actions → „Deploy auf den Server" → Run workflow**
+      testen. Danach aktualisiert sich der Server nach jedem Merge nach `main`
+      von allein.
 
 ---
 
-## 4. ☕ Kür: MCP-Connector einrichten (nur, wenn du in Claude Code bauen willst)
+## 4. ☕ Kür: MCP-Connector einrichten (nur für Claude Code / Claude Desktop)
 
-**Was es bringt:** In **Claude Code** bekommt Claude fertige Werkzeuge
-(„Klassen auflisten", „Lernumgebung anlegen") und legt Lernumgebungen ohne
-curl direkt in der Plattform ab. **In Cowork brauchst du das nicht** – da nutzt
-du das Briefing (Punkt 5).
+**Geklärt (deine Cowork-Frage):** Der Connector, den ich gebaut habe, ist ein
+**lokaler** MCP-Server. Laut Anthropic-Support laufen lokale MCP-Server **nur in
+Claude Code und Claude Desktop – NICHT in Cowork**. Cowork kann nur
+**Remote**-Connector (eine öffentliche URL). Für Cowork heißt das:
 
-**Voraussetzung:** Claude Code ist auf deinem Mac installiert.
+- **Jetzt sofort:** In Cowork nutzt du das **Briefing/die API** (Punkt 5) – das
+  funktioniert dort zuverlässig, ohne Connector.
+- **Später, am elegantesten:** Ich kann einen **Remote-MCP-Endpunkt direkt in
+  die Plattform** einbauen (`https://hebid.de/mcp`). Den fügst du dann in Cowork
+  unter **Customize → Connectors → Add custom** als URL hinzu und hast die
+  Werkzeuge nativ in Cowork. → Sag Bescheid, wenn ich das bauen soll (eigenes
+  Feature, eigener Code-Chat).
+
+**Der lokale Connector unten lohnt sich also nur, wenn du in Claude Code
+arbeitest. Voraussetzung:** Claude Code ist auf deinem Mac installiert.
 
 - [ ] In der Plattform: Dashboard → **„KI-Prompt & API"** → API-Schlüssel
       kopieren (beginnt mit `sk_…`).
@@ -123,8 +137,6 @@ du das Briefing (Punkt 5).
 - [ ] Testen: `claude mcp list` und im Chat „Zeig mir meine Klassen."
 
 > Die ausführliche Anleitung steht in [`mcp/README.md`](../mcp/README.md).
-> **Offene Frage, die ich dir noch beantworte:** ob man denselben Connector auch
-> in Cowork hinzufügen kann. Bis dahin gilt: Cowork → Briefing, Code → MCP.
 
 ---
 

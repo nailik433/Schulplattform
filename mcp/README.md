@@ -1,9 +1,15 @@
 # MCP-Connector für die Schulplattform
 
-Damit bekommt **Claude in Cowork / Claude Code** fertige Werkzeuge, um
+Damit bekommt **Claude Code / Claude Desktop** fertige Werkzeuge, um
 interaktive Lernumgebungen **direkt in deine Plattform** (`hebid.de`) zu
 schreiben – ohne curl, ohne Chrome. Statt Kommandozeilen-Befehle hat Claude
 dann diese Aktionen:
+
+> **Wichtig – nicht für Cowork:** Dies ist ein **lokaler** MCP-Server. Laut
+> Anthropic-Support laufen lokale MCP-Server nur in **Claude Code** und
+> **Claude Desktop**, nicht in **Cowork**. In Cowork nutzt du stattdessen das
+> [`docs/COWORK-BRIEFING.md`](../docs/COWORK-BRIEFING.md) (API) – oder künftig
+> einen Remote-MCP-Endpunkt in der Plattform selbst.
 
 - **`klassen_auflisten`** – zeigt deine Klassen mit ihren IDs
 - **`lernumgebung_anlegen`** – legt eine neue Lernumgebung in einer Klasse an
