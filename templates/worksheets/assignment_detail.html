@@ -52,7 +52,7 @@
         <table class="data">
             <thead>
                 <tr>
-                    <th>Nr.</th>
+                    <th>Kennung</th>
                     <th>Name</th>
                     <th>Status</th>
                     <th>Dateien</th>
@@ -61,7 +61,7 @@
             <tbody>
                 {% for row in roster %}
                     <tr>
-                        <td>{{ row.student.number_label }}</td>
+                        <td>{{ assignment.school_class.name }}-{{ row.student.number_padded }}</td>
                         <td>{{ row.student.display_name|default:"—" }}</td>
                         <td>
                             {% if row.submission %}

@@ -231,11 +231,13 @@ class StudentNumberTests(TestCase):
         self.assertEqual(s2.number, 2)
         self.assertEqual(s2.number_label, "#002")
 
-    def test_label_falls_back_to_number(self):
+    def test_label_falls_back_to_seat_label(self):
         teacher = make_teacher("num2@example.com")
-        school_class = make_class(teacher)
+        school_class = make_class(teacher)  # name "5a"
         anon = Student.objects.create(school_class=school_class)
-        self.assertEqual(anon.label, "#001")
+        self.assertEqual(anon.label, "5a-001")
+        self.assertEqual(anon.seat_label, "5a-001")
+        self.assertEqual(anon.number_padded, "001")
 
 
 class StudentLoginTests(TestCase):
@@ -345,3 +347,75 @@ class ClassCreateTests(TestCase):
             reverse("schools:class_create"), {"name": "7c"}, follow=True
         )
         self.assertFalse(SchoolClass.objects.filter(name="7c").exists())
+
+
+class StudentBulkDeleteTests(TestCase):
+    def setUp(self):
+        self.teacher = make_teacher("bulk@example.com")
+        self.school_class = make_class(self.teacher)
+        self.s1 = Student.objects.create(school_class=self.school_class)
+        self.s2 = Student.objects.create(school_class=self.school_class)
+        self.s3 = Student.objects.create(school_class=self.school_class)
+        self.client.force_login(self.teacher)
+
+    def test_bulk_delete_selected(self):
+        self.client.post(
+            reverse("schools:student_bulk_delete", args=[self.school_class.pk]),
+            {"student_ids": [self.s1.pk, self.s3.pk]},
+        )
+        remaining = set(self.school_class.students.values_list("pk", flat=True))
+        self.assertEqual(remaining, {self.s2.pk})
+
+    def test_bulk_delete_nothing_selected(self):
+        self.client.post(
+            reverse("schools:student_bulk_delete", args=[self.school_class.pk]), {}
+        )
+        self.assertEqual(self.school_class.students.count(), 3)
+
+    def test_cannot_bulk_delete_other_class_students(self):
+        other = make_class(make_teacher("other2@example.com"), name="9z")
+        victim = Student.objects.create(school_class=other)
+        self.client.post(
+            reverse("schools:student_bulk_delete", args=[self.school_class.pk]),
+            {"student_ids": [victim.pk]},
+        )
+        # Students of a different class are not affected.
+        self.assertTrue(Student.objects.filter(pk=victim.pk).exists())
+
+
+class ClassDeleteTests(TestCase):
+    def setUp(self):
+        self.owner = make_teacher("delowner@example.com")
+        self.school_class = make_class(self.owner)
+        Student.objects.create(school_class=self.school_class)
+
+    def test_delete_requires_exact_word(self):
+        self.client.force_login(self.owner)
+        self.client.post(
+            reverse("schools:class_delete", args=[self.school_class.pk]),
+            {"confirm": "nein"},
+        )
+        self.assertTrue(SchoolClass.objects.filter(pk=self.school_class.pk).exists())
+
+    def test_delete_with_confirmation(self):
+        self.client.force_login(self.owner)
+        self.client.post(
+            reverse("schools:class_delete", args=[self.school_class.pk]),
+            {"confirm": "löschen"},
+        )
+        self.assertFalse(SchoolClass.objects.filter(pk=self.school_class.pk).exists())
+
+    def test_collaborator_cannot_delete_class(self):
+        colleague = make_teacher("delcol@example.com", school=self.owner.school)
+        ClassMembership.objects.create(
+            school_class=self.school_class,
+            teacher=colleague,
+            role=ClassMembership.Role.COLLABORATOR,
+        )
+        self.client.force_login(colleague)
+        response = self.client.post(
+            reverse("schools:class_delete", args=[self.school_class.pk]),
+            {"confirm": "löschen"},
+        )
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(SchoolClass.objects.filter(pk=self.school_class.pk).exists())

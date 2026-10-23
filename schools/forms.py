@@ -54,6 +54,21 @@ class BulkStudentForm(forms.Form):
         return names
 
 
+class ClassDeleteConfirmForm(forms.Form):
+    """Require the user to type the word "löschen" to confirm deletion."""
+
+    confirm = forms.CharField(
+        label='Zum Bestätigen „löschen" eingeben',
+        widget=forms.TextInput(attrs={"placeholder": "löschen", "autocomplete": "off"}),
+    )
+
+    def clean_confirm(self):
+        value = self.cleaned_data["confirm"].strip().lower()
+        if value != "löschen":
+            raise forms.ValidationError('Bitte genau das Wort „löschen" eingeben.')
+        return value
+
+
 class ShareClassForm(forms.Form):
     """Share a class with a colleague, identified by their email address."""
 

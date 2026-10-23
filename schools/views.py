@@ -8,6 +8,7 @@ from django.views.decorators.http import require_POST
 
 from .forms import (
     BulkStudentForm,
+    ClassDeleteConfirmForm,
     CountStudentForm,
     SchoolClassForm,
     ShareClassForm,
@@ -108,7 +109,15 @@ def get_current_student(request):
 # --------------------------------------------------------------------------
 
 def home(request):
-    return render(request, "home.html")
+    """The landing page is the student code login. Teachers who are already
+    signed in go to their dashboard; a student with an active session goes to
+    their space."""
+    if request.user.is_authenticated:
+        return redirect("schools:dashboard")
+    student = get_current_student(request)
+    if student:
+        return redirect("schools:student_space", token=student.access_code)
+    return render(request, "students/login.html", {"form": StudentLoginForm()})
 
 
 # --------------------------------------------------------------------------
@@ -247,6 +256,46 @@ def class_share_remove(request, pk, teacher_pk):
 
 
 @login_required
+def class_delete(request, pk):
+    """Delete a whole class (owner only) after typing "löschen" to confirm.
+    Removes students, worksheets, submissions and their uploaded files."""
+    school_class = _get_owned_class(request.user, pk)
+
+    if request.method == "POST":
+        form = ClassDeleteConfirmForm(request.POST)
+        if form.is_valid():
+            # Remove uploaded file blobs first (DB cascade won't delete them).
+            from worksheets.models import AssignmentFile, SubmissionFile
+
+            for af in AssignmentFile.objects.filter(
+                assignment__school_class=school_class
+            ):
+                af.file.delete(save=False)
+            for sf in SubmissionFile.objects.filter(
+                submission__assignment__school_class=school_class
+            ):
+                sf.file.delete(save=False)
+
+            name = str(school_class)
+            school_class.delete()
+            messages.success(request, f"Klasse „{name}“ wurde vollständig gelöscht.")
+            return redirect("schools:dashboard")
+    else:
+        form = ClassDeleteConfirmForm()
+
+    return render(
+        request,
+        "schools/class_confirm_delete.html",
+        {
+            "school_class": school_class,
+            "form": form,
+            "student_count": school_class.students.count(),
+            "assignment_count": school_class.assignments.count(),
+        },
+    )
+
+
+@login_required
 @require_POST
 def student_add(request, pk):
     school_class = _get_teacher_class(request.user, pk)
@@ -341,6 +390,21 @@ def student_delete(request, pk, student_pk):
 
 
 @login_required
+@require_POST
+def student_bulk_delete(request, pk):
+    school_class = _get_teacher_class(request.user, pk)
+    ids = request.POST.getlist("student_ids")
+    if not ids:
+        messages.error(request, "Es wurde niemand ausgewählt.")
+        return redirect(school_class.get_absolute_url())
+    qs = school_class.students.filter(pk__in=ids)
+    count = qs.count()
+    qs.delete()
+    messages.success(request, f"{count} Schüler/in(nen) wurden entfernt.")
+    return redirect(school_class.get_absolute_url())
+
+
+@login_required
 def class_qr_document(request, pk):
     """Printable A4 document: QR cards (3x5 grid) plus a confidential teacher
     list mapping numbers/tokens to hand-written names."""
@@ -352,9 +416,9 @@ def class_qr_document(request, pk):
         url = request.build_absolute_uri(f"/s/{student.access_code}/")
         cards.append({"student": student, "url": url, "svg": qr_svg(url)})
 
-    # Chunk into pages of 15 (a 3x5 grid). Pad the last page with empty cells
-    # so its layout stays consistent.
-    per_page = 15
+    # Chunk into pages of 31 (a 4-column grid, up to 8 rows) so a class fits
+    # on one A4 page without overlapping.
+    per_page = 31
     pages = [cards[i : i + per_page] for i in range(0, len(cards), per_page)]
     if pages:
         last = pages[-1]

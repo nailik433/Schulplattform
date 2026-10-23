@@ -170,13 +170,28 @@ class Student(models.Model):
         return self.label
 
     @property
+    def number_padded(self):
+        """The number as a zero-padded 3-digit string, e.g. "001"."""
+        return f"{self.number:03d}" if self.number else ""
+
+    @property
     def number_label(self):
         return f"#{self.number:03d}" if self.number else ""
 
     @property
+    def seat_label(self):
+        """Anonymous, class-prefixed identifier, e.g. "7b-001"."""
+        if not self.number:
+            return ""
+        if self.school_class_id:
+            return f"{self.school_class.name}-{self.number:03d}"
+        return f"#{self.number:03d}"
+
+    @property
     def label(self):
-        """A human-facing label: the display name if set, else the number."""
-        return self.display_name or self.number_label or "—"
+        """A human-facing label: the display name if set, else the anonymous
+        class-prefixed seat label (e.g. "7b-001")."""
+        return self.display_name or self.seat_label or "—"
 
     def save(self, *args, **kwargs):
         if not self.access_code:

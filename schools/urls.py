@@ -9,6 +9,7 @@ urlpatterns = [
     path("uebersicht/", views.dashboard, name="dashboard"),
     path("klasse/neu/", views.class_create, name="class_create"),
     path("klasse/<int:pk>/", views.class_detail, name="class_detail"),
+    path("klasse/<int:pk>/loeschen/", views.class_delete, name="class_delete"),
     path("klasse/<int:pk>/qr/", views.class_qr_document, name="class_qr_document"),
     path("klasse/<int:pk>/freigabe/", views.class_share_add, name="class_share_add"),
     path(
@@ -41,6 +42,11 @@ urlpatterns = [
         "klasse/<int:pk>/schueler/<int:student_pk>/loeschen/",
         views.student_delete,
         name="student_delete",
+    ),
+    path(
+        "klasse/<int:pk>/schueler/mehrere-loeschen/",
+        views.student_bulk_delete,
+        name="student_bulk_delete",
     ),
     # Student area. Literal routes first, then the token catch-all.
     path("s/", views.student_login, name="student_login"),

@@ -20,11 +20,10 @@
                     <button type="submit" class="link-button">Abmelden</button>
                 </form>
             {% elif current_student %}
-                <span class="nav-user">{{ current_student.display_name }}</span>
+                <span class="nav-user">{{ current_student.label }}</span>
                 <a href="{% url 'schools:student_logout' %}">Abmelden</a>
             {% else %}
                 <a href="{% url 'accounts:login' %}">Lehrer-Login</a>
-                <a href="{% url 'schools:student_login' %}">Schüler-Login</a>
             {% endif %}
         </nav>
     </div>

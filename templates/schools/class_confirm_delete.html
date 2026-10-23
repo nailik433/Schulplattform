@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Klasse löschen{% endblock %}
+
+{% block content %}
+<p class="muted"><a href="{% url 'schools:class_detail' school_class.pk %}">← Zurück zur Klasse</a></p>
+
+<div class="card card-narrow">
+    <h1>Klasse löschen</h1>
+    <p>
+        Du bist dabei, die Klasse <strong>{{ school_class }}</strong> dauerhaft zu
+        löschen. Dabei werden <strong>unwiderruflich</strong> entfernt:
+    </p>
+    <ul>
+        <li>{{ student_count }} Schüler/in(nen) inkl. ihrer Zugangscodes</li>
+        <li>{{ assignment_count }} Arbeitsblatt/Arbeitsblätter inkl. aller Abgaben und Dateien</li>
+    </ul>
+    <p class="muted">Dies kann nicht rückgängig gemacht werden.</p>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form.as_p }}
+        <div class="form-actions">
+            <button type="submit" class="btn btn-danger">Endgültig löschen</button>
+            <a class="btn btn-secondary" href="{% url 'schools:class_detail' school_class.pk %}">Abbrechen</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -12,37 +12,15 @@
             {{ school_class.school.name }}{% if school_class.subject %} &middot; {{ school_class.subject }}{% endif %}
         </p>
     </div>
-    {% if students %}
-        <a class="btn" href="{% url 'schools:class_qr_document' school_class.pk %}" target="_blank">
-            🖨️ QR-Dokument drucken
-        </a>
-    {% endif %}
-</div>
-
-<div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));">
-    <div class="card">
-        <h2 style="margin-top:0;">Anzahl anlegen</h2>
-        <form method="post" action="{% url 'schools:student_add_count' school_class.pk %}" novalidate>
-            {% csrf_token %}
-            {{ count_form.as_p }}
-            <button type="submit" class="btn">Plätze anlegen</button>
-        </form>
-    </div>
-    <div class="card">
-        <h2 style="margin-top:0;">Einzeln (mit Name)</h2>
-        <form method="post" action="{% url 'schools:student_add' school_class.pk %}" novalidate>
-            {% csrf_token %}
-            {{ student_form.as_p }}
-            <button type="submit" class="btn">Hinzufügen</button>
-        </form>
-    </div>
-    <div class="card">
-        <h2 style="margin-top:0;">Mehrere Namen</h2>
-        <form method="post" action="{% url 'schools:student_bulk_add' school_class.pk %}" novalidate>
-            {% csrf_token %}
-            {{ bulk_form.as_p }}
-            <button type="submit" class="btn">Alle hinzufügen</button>
-        </form>
+    <div class="actions-cell">
+        {% if students %}
+            <a class="btn" href="{% url 'schools:class_qr_document' school_class.pk %}" target="_blank">
+                🖨️ QR-Dokument drucken
+            </a>
+        {% endif %}
+        {% if is_owner %}
+            <a class="btn btn-danger" href="{% url 'schools:class_delete' school_class.pk %}">Klasse löschen</a>
+        {% endif %}
     </div>
 </div>
 
@@ -81,66 +59,83 @@
 
 <h2>Schüler/innen &amp; Tokens</h2>
 {% if students %}
-    <div class="card" style="padding:0;overflow-x:auto;">
-        <table class="data">
-            <thead>
-                <tr>
-                    <th>Nr.</th>
-                    <th>Name</th>
-                    <th>Token</th>
-                    <th>Status</th>
-                    <th>Aktionen</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for student in students %}
+    <form method="post">
+        {% csrf_token %}
+        <div class="card" style="padding:0;overflow-x:auto;">
+            <table class="data">
+                <thead>
                     <tr>
-                        <td>{{ student.number_label }}</td>
-                        <td>{{ student.display_name|default:"—" }}</td>
-                        <td><span class="code">{{ student.access_code }}</span></td>
-                        <td>
-                            {% if student.is_active %}
-                                <span class="badge">aktiv</span>
-                            {% else %}
-                                <span class="badge inactive">deaktiviert</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <div class="actions-cell">
-                                <form class="inline-form" method="post"
-                                      action="{% url 'schools:student_regenerate_code' school_class.pk student.pk %}">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-secondary btn-small">Neuer Token</button>
-                                </form>
-                                <form class="inline-form" method="post"
-                                      action="{% url 'schools:student_toggle_active' school_class.pk student.pk %}">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-secondary btn-small">
+                        <th><input type="checkbox" onclick="spToggleAll(this)" title="Alle auswählen"></th>
+                        <th>Kennung</th>
+                        <th>Token</th>
+                        <th>Status</th>
+                        <th>Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                        <tr>
+                            <td><input type="checkbox" name="student_ids" value="{{ student.pk }}"></td>
+                            <td>{{ school_class.name }}-{{ student.number_padded }}</td>
+                            <td><span class="code">{{ student.access_code }}</span></td>
+                            <td>
+                                {% if student.is_active %}
+                                    <span class="badge">aktiv</span>
+                                {% else %}
+                                    <span class="badge inactive">deaktiviert</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="actions-cell">
+                                    <button type="submit" class="btn btn-secondary btn-small"
+                                            formaction="{% url 'schools:student_regenerate_code' school_class.pk student.pk %}">Neuer Token</button>
+                                    <button type="submit" class="btn btn-secondary btn-small"
+                                            formaction="{% url 'schools:student_toggle_active' school_class.pk student.pk %}">
                                         {% if student.is_active %}Deaktivieren{% else %}Aktivieren{% endif %}
                                     </button>
-                                </form>
-                                <form class="inline-form" method="post"
-                                      action="{% url 'schools:student_delete' school_class.pk student.pk %}"
-                                      onsubmit="return confirm('{{ student.label|escapejs }} wirklich entfernen?');">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-danger btn-small">Entfernen</button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                                    <button type="submit" class="btn btn-danger btn-small"
+                                            formaction="{% url 'schools:student_delete' school_class.pk student.pk %}"
+                                            onclick="return confirm('Diesen Platz wirklich entfernen?');">Entfernen</button>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="form-actions" style="margin-top:12px;">
+            <button type="submit" class="btn btn-danger"
+                    formaction="{% url 'schools:student_bulk_delete' school_class.pk %}"
+                    onclick="return spConfirmBulk();">Ausgewählte löschen</button>
+        </div>
+    </form>
+{% else %}
+    <div class="card">
+        <p class="muted">Noch keine Schüler/innen in dieser Klasse. Füge unten welche hinzu.</p>
     </div>
-    <p class="muted">
+{% endif %}
+
+<div class="card" style="margin-top:14px;">
+    <form method="post" action="{% url 'schools:student_add_count' school_class.pk %}"
+          style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+        {% csrf_token %}
+        <div>
+            <label for="{{ count_form.count.id_for_label }}">Weitere Schüler/innen hinzufügen (Anzahl)</label>
+            {{ count_form.count }}
+        </div>
+        <button type="submit" class="btn">Hinzufügen</button>
+    </form>
+    <p class="muted" style="margin:8px 0 0;">
+        Es werden anonyme Plätze mit je einem Token erzeugt (z. B. {{ school_class.name }}-001).
+    </p>
+</div>
+
+{% if students %}
+    <p class="muted" style="margin-top:12px;">
         Schüler/innen melden sich mit ihrem Token unter
         <a href="{% url 'schools:student_login' %}">{{ request.scheme }}://{{ request.get_host }}{% url 'schools:student_login' %}</a>
         an – oder scannen einfach den QR-Code aus dem Druck-Dokument.
     </p>
-{% else %}
-    <div class="card">
-        <p class="muted">Noch keine Schüler/innen in dieser Klasse. Lege oben welche an.</p>
-    </div>
 {% endif %}
 
 <h2 style="margin-top:28px;">Kolleg/innen</h2>
@@ -194,4 +189,15 @@
         </p>
     </div>
 {% endif %}
+
+<script>
+function spToggleAll(cb){
+    document.querySelectorAll('input[name=student_ids]').forEach(function(x){ x.checked = cb.checked; });
+}
+function spConfirmBulk(){
+    var n = document.querySelectorAll('input[name=student_ids]:checked').length;
+    if(n === 0){ alert('Bitte zuerst Schüler/innen auswählen (Häkchen setzen).'); return false; }
+    return confirm(n + ' Schüler/in(nen) wirklich löschen?');
+}
+</script>
 {% endblock %}
