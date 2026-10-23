@@ -15,6 +15,20 @@
     --info-bg: #eef4ff;
     --info-ink: #0057c7;
     --code-bg: #1d1d1f;
+    --code-ink: #f5f5f7;
+    --header-bg: rgba(255,255,255,.8);
+    --btn-secondary-hover: #ececef;
+    --danger-bg: #fff0f0;
+    --danger-hover: #ffe4e4;
+    --danger-border: #f3c9c9;
+    --ok-border: #bfe8cd;
+    --warn-bg: #fff4e0;
+    --warn-ink: #9a5b00;
+    --warn-border: #f5dfae;
+    --info-border: #cfdffb;
+    --focus-ring: rgba(0,113,227,.35);
+    --focus-ring-soft: rgba(0,113,227,.15);
+    color-scheme: light;
     --radius: 18px;
     --radius-sm: 12px;
     --shadow: 0 1px 3px rgba(0,0,0,.04), 0 6px 24px rgba(0,0,0,.06);
@@ -49,7 +63,7 @@ a, button, input, textarea, select, label[role] {
 
 /* ---- Header ---- */
 .site-header {
-    background: rgba(255,255,255,.8);
+    background: var(--header-bg);
     backdrop-filter: saturate(180%) blur(20px);
     -webkit-backdrop-filter: saturate(180%) blur(20px);
     border-bottom: 1px solid var(--border-soft);
@@ -121,12 +135,12 @@ h2 { font-size: 1.3rem; margin: 30px 0 14px; letter-spacing: -0.01em; font-weigh
 }
 .btn:hover { background: var(--primary-dark); }
 .btn:active { transform: scale(0.97); opacity: .92; }
-.btn:focus-visible { outline: 3px solid rgba(0,113,227,.35); outline-offset: 2px; }
+.btn:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
 .btn-block { width: 100%; }
 .btn-secondary { background: var(--surface-2); color: var(--ink); border: 1px solid var(--border); }
-.btn-secondary:hover { background: #ececef; }
-.btn-danger { background: #fff0f0; color: var(--error-ink); border: 1px solid #f3c9c9; }
-.btn-danger:hover { background: #ffe4e4; }
+.btn-secondary:hover { background: var(--btn-secondary-hover); }
+.btn-danger { background: var(--danger-bg); color: var(--error-ink); border: 1px solid var(--danger-border); }
+.btn-danger:hover { background: var(--danger-hover); }
 .btn-small { padding: 7px 12px; min-height: 36px; font-size: 0.86rem; }
 .link-button {
     background: none; border: none; color: var(--primary);
@@ -154,7 +168,7 @@ input[type=datetime-local], textarea, select {
 input:focus, textarea:focus, select:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 4px rgba(0,113,227,.15);
+    box-shadow: 0 0 0 4px var(--focus-ring-soft);
 }
 .helptext { display: block; color: var(--muted); font-size: 0.82rem; margin-top: 5px; }
 .errorlist { color: var(--error-ink); list-style: none; padding: 0; margin: 6px 0; font-size: 0.88rem; }
@@ -170,7 +184,7 @@ input:focus, textarea:focus, select:focus {
     background: var(--surface-2);
     transition: border-color .15s ease, background-color .15s ease;
 }
-.dropzone.drag { border-color: var(--primary); background: #eef4ff; }
+.dropzone.drag { border-color: var(--primary); background: var(--info-bg); }
 .dropzone .dz-hint { display: block; color: var(--muted); font-size: 0.95rem; margin-bottom: 12px; }
 .dropzone input[type=file] { width: 100%; }
 .dz-list { list-style: none; padding: 0; margin: 12px 0 0; text-align: left; }
@@ -205,7 +219,7 @@ table.data tr:last-child td { border-bottom: none; }
 .code {
     font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
     background: var(--code-bg);
-    color: #f5f5f7;
+    color: var(--code-ink);
     padding: 4px 9px;
     border-radius: 7px;
     letter-spacing: 0.1em;
@@ -215,7 +229,7 @@ table.data tr:last-child td { border-bottom: none; }
     display: inline-block;
     font-family: ui-monospace, Menlo, Consolas, monospace;
     font-size: 2rem; letter-spacing: 0.25em;
-    background: var(--code-bg); color: #f5f5f7;
+    background: var(--code-bg); color: var(--code-ink);
     padding: 12px 22px; border-radius: 14px;
 }
 
@@ -225,7 +239,7 @@ table.data tr:last-child td { border-bottom: none; }
     background: var(--surface-2); color: var(--muted); border: 1px solid var(--border-soft);
     white-space: nowrap;
 }
-.badge.inactive { background: var(--error-bg); color: var(--error-ink); border-color: #f3c9c9; }
+.badge.inactive { background: var(--error-bg); color: var(--error-ink); border-color: var(--danger-border); }
 .actions-cell { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
 /* ---- Footer ---- */
@@ -265,10 +279,10 @@ table.data tr:last-child td { border-bottom: none; }
     background: var(--surface-2); color: var(--muted); border: 1px solid var(--border-soft);
     white-space: nowrap;
 }
-.chip-ok { background: var(--success-bg); color: var(--success-ink); border-color: #bfe8cd; }
-.chip-warn { background: #fff4e0; color: #9a5b00; border-color: #f5dfae; }
-.chip-danger { background: var(--error-bg); color: var(--error-ink); border-color: #f3c9c9; }
-.chip-info { background: var(--info-bg); color: var(--info-ink); border-color: #cfdffb; }
+.chip-ok { background: var(--success-bg); color: var(--success-ink); border-color: var(--ok-border); }
+.chip-warn { background: var(--warn-bg); color: var(--warn-ink); border-color: var(--warn-border); }
+.chip-danger { background: var(--error-bg); color: var(--error-ink); border-color: var(--danger-border); }
+.chip-info { background: var(--info-bg); color: var(--info-ink); border-color: var(--info-border); }
 .summary-chips { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
 /* ---- Clickable cards ---- */
@@ -280,7 +294,7 @@ table.data tr:last-child td { border-bottom: none; }
 .card-link:active { transform: scale(.985); }
 .card-link-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
 .card-link-foot { margin-top: 8px; font-size: 0.92rem; }
-.card-alert { border-color: #f3c9c9; }
+.card-alert { border-color: var(--danger-border); }
 .class-meta { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; font-size: 0.86rem; color: var(--muted); }
 .class-meta span { display: inline-flex; align-items: center; gap: 5px; }
 
@@ -309,11 +323,11 @@ table.data tr:last-child td { border-bottom: none; }
 .error-page h1 { margin-top: 4px; }
 
 /* ---- Lesson player (students): the lesson gets the whole screen ---- */
-body.player { background: #fff; overflow: hidden; }
+body.player { background: var(--surface); overflow: hidden; }
 .player-bar {
     height: 52px; display: flex; align-items: center; gap: 12px; padding: 0 14px;
     border-bottom: 1px solid var(--border-soft);
-    background: rgba(255,255,255,.9);
+    background: var(--header-bg);
     backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px);
 }
 .player-title { font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -321,6 +335,47 @@ body.player { background: #fff; overflow: hidden; }
 .player-frame {
     display: block; width: 100%; border: 0; background: #fff;
     height: calc(100vh - 52px); height: calc(100dvh - 52px);
+}
+
+/* ---- Dark mode: follows the system setting (iPadOS/macOS/Windows) ---- */
+@media (prefers-color-scheme: dark) {
+    :root {
+        color-scheme: dark;
+        --bg: #000000;
+        --surface: #1c1c1e;
+        --surface-2: #2c2c2e;
+        --ink: #f5f5f7;
+        --muted: #98989d;
+        --primary: #2997ff;
+        --primary-dark: #4aa6ff;
+        --border: #3a3a3c;
+        --border-soft: #2a2a2d;
+        --success-bg: #0f2a1b;
+        --success-ink: #5fd38a;
+        --ok-border: #1f5a35;
+        --error-bg: #3a1517;
+        --error-ink: #ff7b7b;
+        --danger-bg: #2d1416;
+        --danger-hover: #3a1a1d;
+        --danger-border: #5a2326;
+        --info-bg: #10233d;
+        --info-ink: #7db8ff;
+        --info-border: #1f3f6e;
+        --warn-bg: #33250a;
+        --warn-ink: #ffcc66;
+        --warn-border: #5a4315;
+        --code-bg: #0a0a0a;
+        --code-ink: #f5f5f7;
+        --header-bg: rgba(28,28,30,.82);
+        --btn-secondary-hover: #3a3a3c;
+        --shadow: 0 1px 3px rgba(0,0,0,.5), 0 8px 28px rgba(0,0,0,.55);
+        --shadow-sm: 0 1px 2px rgba(0,0,0,.5);
+        --focus-ring: rgba(41,151,255,.45);
+        --focus-ring-soft: rgba(41,151,255,.22);
+    }
+    /* Lesson HTML keeps a white canvas unless it brings its own background,
+       so author pages without a background stay readable. */
+    .player-frame, .lesson-preview { background: #fff; }
 }
 
 /* ---- iPad / tablet & phone ---- */
