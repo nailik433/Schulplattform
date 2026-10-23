@@ -3,11 +3,9 @@
 {% block title %}{{ assignment.title }}{% endblock %}
 
 {% block content %}
-<p class="muted">
-    <a href="{% url 'schools:class_detail' assignment.school_class.pk %}">← {{ assignment.school_class.name }}</a>
-</p>
+<a class="back-link" href="{% url 'schools:class_detail' assignment.school_class.pk %}">← {{ assignment.school_class.name }}</a>
 
-<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+<div class="page-head">
     <h1>{{ assignment.title }}</h1>
     <div class="actions-cell">
         <a class="btn btn-secondary btn-small" href="{% url 'worksheets:assignment_edit' assignment.pk %}">Bearbeiten</a>
@@ -47,8 +45,8 @@
 </div>
 
 {% if assignment.collect_submissions %}
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
-        <h2 style="margin-bottom:0;">Abgaben <span class="muted" style="font-weight:400;">({{ submitted_count }}/{{ roster_count }})</span></h2>
+    <div class="section-head">
+        <h2>Abgaben <span class="muted" style="font-weight:400;">({{ submitted_count }}/{{ roster_count }})</span></h2>
         {% if submitted_count %}
             <a class="btn btn-small" href="{% url 'worksheets:submissions_zip' assignment.pk %}">⬇️ Alle Abgaben (ZIP)</a>
         {% endif %}

@@ -3,13 +3,14 @@
 {% block title %}{{ school_class }}{% endblock %}
 
 {% block content %}
-<p class="muted"><a href="{% url 'schools:dashboard' %}">← Meine Klassen</a></p>
+<a class="back-link" href="{% url 'schools:dashboard' %}">← Meine Klassen</a>
 
-<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+<div class="page-head">
     <div>
         <h1>{{ school_class.name }}</h1>
         <p class="subtitle">
             {{ school_class.school.name }}{% if school_class.subject %} &middot; {{ school_class.subject }}{% endif %}
+            &middot; {{ active_count }} aktive Schüler/innen
         </p>
     </div>
     <div class="actions-cell">
@@ -24,65 +25,80 @@
     </div>
 </div>
 
-<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-top:28px;">
-    <h2 style="margin:0;">Arbeitsblätter</h2>
+<div class="section-head">
+    <h2>Arbeitsblätter</h2>
     <a class="btn" href="{% url 'worksheets:assignment_create' school_class.pk %}">+ Arbeitsblatt austeilen</a>
 </div>
-{% with assignments=school_class.assignments.all %}
-    {% if assignments %}
-        <div class="card" style="padding:0;overflow-x:auto;">
-            <table class="data">
-                <thead>
+{% if assignments %}
+    <div class="card" style="padding:0;overflow-x:auto;">
+        <table class="data">
+            <thead>
+                <tr>
+                    <th>Titel</th>
+                    <th>Dateien</th>
+                    <th>Abgaben</th>
+                    <th>Abgabe bis</th>
+                    <th>Erstellt</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in assignments %}
                     <tr>
-                        <th>Titel</th>
-                        <th>Dateien</th>
-                        <th>Abgabe bis</th>
-                        <th>Erstellt</th>
+                        <td><a href="{{ a.get_absolute_url }}">{{ a.title }}</a></td>
+                        <td>{{ a.n_files }}</td>
+                        <td>
+                            {% if a.collect_submissions %}
+                                {% if a.n_submissions >= active_count and active_count %}
+                                    <span class="chip chip-ok">{{ a.n_submissions }}/{{ active_count }}</span>
+                                {% else %}
+                                    <span class="chip">{{ a.n_submissions }}/{{ active_count }}</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>{% if a.due_date %}{{ a.due_date|date:"d.m.Y H:i" }}{% else %}—{% endif %}</td>
+                        <td class="muted">{{ a.created_at|date:"d.m.Y" }}</td>
                     </tr>
-                </thead>
-                <tbody>
-                    {% for a in assignments %}
-                        <tr>
-                            <td><a href="{{ a.get_absolute_url }}">{{ a.title }}</a></td>
-                            <td>{{ a.files.count }}</td>
-                            <td>{% if a.due_date %}{{ a.due_date|date:"d.m.Y H:i" }}{% else %}—{% endif %}</td>
-                            <td class="muted">{{ a.created_at|date:"d.m.Y" }}</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    {% else %}
-        <div class="card"><p class="muted">Noch keine Arbeitsblätter ausgeteilt.</p></div>
-    {% endif %}
-{% endwith %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="card"><p class="muted" style="margin:0;">Noch keine Arbeitsblätter ausgeteilt.</p></div>
+{% endif %}
 
-<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-top:28px;">
-    <h2 style="margin:0;">Lernumgebungen</h2>
+<div class="section-head">
+    <h2>Lernumgebungen</h2>
     <a class="btn" href="{% url 'lessons:lesson_create' school_class.pk %}">+ Lernumgebung</a>
 </div>
-{% with lessons=school_class.lessons.all %}
-    {% if lessons %}
-        <div class="card" style="padding:0;overflow-x:auto;">
-            <table class="data">
-                <thead><tr><th>Titel</th><th>Erstellt</th></tr></thead>
-                <tbody>
-                    {% for l in lessons %}
-                        <tr>
-                            <td><a href="{{ l.get_absolute_url }}">{{ l.title }}</a></td>
-                            <td class="muted">{{ l.created_at|date:"d.m.Y" }}</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    {% else %}
-        <div class="card"><p class="muted">Noch keine Lernumgebungen.
-            <a href="{% url 'lessons:api_key' %}">KI-Prompt &amp; API</a> ansehen, um welche von Claude bauen zu lassen.</p></div>
-    {% endif %}
-{% endwith %}
+{% if lessons %}
+    <div class="card" style="padding:0;overflow-x:auto;">
+        <table class="data">
+            <thead><tr><th>Titel</th><th>Fertig</th><th>Erstellt</th></tr></thead>
+            <tbody>
+                {% for l in lessons %}
+                    <tr>
+                        <td><a href="{{ l.get_absolute_url }}">🧪 {{ l.title }}</a></td>
+                        <td>
+                            {% if l.n_done >= active_count and active_count %}
+                                <span class="chip chip-ok">{{ l.n_done }}/{{ active_count }}</span>
+                            {% else %}
+                                <span class="chip">{{ l.n_done }}/{{ active_count }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="muted">{{ l.created_at|date:"d.m.Y" }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="card"><p class="muted" style="margin:0;">Noch keine Lernumgebungen.
+        <a href="{% url 'lessons:api_key' %}">KI &amp; API</a> ansehen, um welche von Claude bauen zu lassen.</p></div>
+{% endif %}
 
-<h2>Schüler/innen &amp; Tokens</h2>
+<h2 class="section-title">Schüler/innen &amp; Tokens</h2>
 {% if students %}
     <form method="post">
         {% csrf_token %}
@@ -180,7 +196,7 @@
     </p>
 {% endif %}
 
-<h2 style="margin-top:28px;">Kolleg/innen</h2>
+<h2 class="section-title">Kolleg/innen</h2>
 {% if is_owner %}
     <div class="card">
         <p class="muted" style="margin-top:0;">

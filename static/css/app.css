@@ -219,7 +219,8 @@ table.data tr:last-child td { border-bottom: none; }
     padding: 12px 22px; border-radius: 14px;
 }
 
-.muted { color: var(--muted); }.badge {
+.muted { color: var(--muted); }
+.badge {
     font-size: 0.74rem; padding: 3px 9px; border-radius: 999px;
     background: var(--surface-2); color: var(--muted); border: 1px solid var(--border-soft);
     white-space: nowrap;
@@ -246,6 +247,81 @@ table.data tr:last-child td { border-bottom: none; }
 .feature-list { list-style: none; padding: 0; }
 .feature-list li { padding: 8px 0 8px 28px; position: relative; }
 .feature-list li::before { content: "✓"; position: absolute; left: 0; color: var(--success-ink); font-weight: 700; }
+
+/* ---- Layout utilities ---- */
+.page-head { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px 16px; margin-bottom: 18px; }
+.page-head h1 { margin-bottom: 4px; }
+.page-head .subtitle { margin-bottom: 0; }
+.section-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin: 30px 0 12px; }
+.section-head h2 { margin: 0; }
+.section-title { margin: 30px 0 12px; }
+.back-link { display: inline-block; margin-bottom: 10px; color: var(--muted); text-decoration: none; font-size: 0.92rem; }
+.back-link:hover { color: var(--primary); }
+
+/* ---- Status chips ---- */
+.chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 0.76rem; font-weight: 600; padding: 4px 10px; border-radius: 999px;
+    background: var(--surface-2); color: var(--muted); border: 1px solid var(--border-soft);
+    white-space: nowrap;
+}
+.chip-ok { background: var(--success-bg); color: var(--success-ink); border-color: #bfe8cd; }
+.chip-warn { background: #fff4e0; color: #9a5b00; border-color: #f5dfae; }
+.chip-danger { background: var(--error-bg); color: var(--error-ink); border-color: #f3c9c9; }
+.chip-info { background: var(--info-bg); color: var(--info-ink); border-color: #cfdffb; }
+.summary-chips { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+/* ---- Clickable cards ---- */
+.card-link {
+    display: block; text-decoration: none; color: inherit; margin: 0;
+    transition: transform .12s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.card-link:hover { transform: translateY(-2px); box-shadow: var(--shadow); border-color: var(--border); }
+.card-link:active { transform: scale(.985); }
+.card-link-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.card-link-foot { margin-top: 8px; font-size: 0.92rem; }
+.card-alert { border-color: #f3c9c9; }
+.class-meta { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; font-size: 0.86rem; color: var(--muted); }
+.class-meta span { display: inline-flex; align-items: center; gap: 5px; }
+
+/* ---- Files & submissions (student view) ---- */
+.file-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.file-pill {
+    display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 999px;
+    background: var(--surface-2); border: 1px solid var(--border-soft); color: var(--ink);
+    text-decoration: none; font-size: 0.92rem;
+}
+.file-pill:hover { border-color: var(--primary); color: var(--primary); }
+.submission-box { margin-top: 16px; border-top: 1px solid var(--border-soft); padding-top: 14px; }
+.submitted-list { list-style: none; padding: 0; margin: 0 0 10px; }
+.submitted-list li { padding: 4px 0; }
+.submitted-list .inline-form { margin-left: 8px; }
+.upload-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.upload-label { position: relative; overflow: hidden; cursor: pointer; }
+.upload-label input[type=file] { position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.upload-names { font-size: 0.88rem; flex: 1; min-width: 120px; }
+
+/* ---- Empty & error states ---- */
+.empty-state { text-align: center; padding: 40px 24px; }
+.empty-icon { font-size: 2.4rem; margin-bottom: 6px; }
+.error-page { text-align: center; padding: 48px 24px; }
+.error-page .code { font-size: 3rem; background: none; color: var(--border); letter-spacing: 0; padding: 0; font-weight: 700; }
+.error-page h1 { margin-top: 4px; }
+
+/* ---- Lesson player (students): the lesson gets the whole screen ---- */
+body.player { background: #fff; overflow: hidden; }
+.player-bar {
+    height: 52px; display: flex; align-items: center; gap: 12px; padding: 0 14px;
+    border-bottom: 1px solid var(--border-soft);
+    background: rgba(255,255,255,.9);
+    backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+.player-title { font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.player-user { color: var(--muted); font-size: 0.86rem; white-space: nowrap; }
+.player-frame {
+    display: block; width: 100%; border: 0; background: #fff;
+    height: calc(100vh - 52px); height: calc(100dvh - 52px);
+}
 
 /* ---- iPad / tablet & phone ---- */
 @media (max-width: 820px) {

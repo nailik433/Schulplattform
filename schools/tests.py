@@ -208,6 +208,20 @@ class ClassSharingTests(TestCase):
             ).exists()
         )
 
+    def test_dashboard_lists_shared_class_separately(self):
+        # Same school, but only a collaborator: the class must show up under
+        # "shared with me", never under "own classes".
+        ClassMembership.objects.create(
+            school_class=self.school_class,
+            teacher=self.colleague,
+            role=ClassMembership.Role.COLLABORATOR,
+        )
+        self.client.force_login(self.colleague)
+        response = self.client.get(reverse("schools:dashboard"))
+        self.assertIn(self.school_class, response.context["shared_classes"])
+        self.assertNotIn(self.school_class, response.context["owned_classes"])
+        self.assertContains(response, "Mit mir geteilte Klassen")
+
     def test_collaborator_does_not_see_owners_other_class(self):
         other_class = make_class(self.owner, name="andere")
         ClassMembership.objects.create(
@@ -255,19 +269,33 @@ class StudentLoginTests(TestCase):
         response = self.client.post(
             reverse("schools:student_login"),
             {"access_code": self.student.access_code.upper()},  # case-insensitive
+            follow=True,
         )
-        self.assertRedirects(
-            response,
-            reverse("schools:student_space", args=[self.student.access_code]),
+        # Typed code -> token URL (logs in) -> clean start page.
+        self.assertEqual(
+            [url for url, _ in response.redirect_chain],
+            [
+                reverse("schools:student_space", args=[self.student.access_code]),
+                reverse("schools:student_home"),
+            ],
         )
+        self.assertContains(response, "Clara")
 
-    def test_token_url_logs_in_directly(self):
-        # This is what the QR code points at.
+    def test_token_url_logs_in_and_redirects_to_clean_url(self):
+        # This is what the QR code points at. The token must not stay in the
+        # address bar, so the view redirects to the session-based start page.
         response = self.client.get(
             reverse("schools:student_space", args=[self.student.access_code])
         )
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Clara")
+        self.assertRedirects(response, reverse("schools:student_home"))
+        home = self.client.get(reverse("schools:student_home"))
+        self.assertContains(home, "Clara")
+        # Student sessions end with the school day (shared classroom iPads).
+        self.assertLessEqual(self.client.session.get_expiry_age(), 10 * 3600)
+
+    def test_start_page_requires_session(self):
+        response = self.client.get(reverse("schools:student_home"))
+        self.assertRedirects(response, reverse("schools:student_login"))
 
     def test_invalid_token_url_redirects_to_start(self):
         response = self.client.get(
@@ -299,6 +327,52 @@ class StudentLoginTests(TestCase):
             self.client.post(url, {"access_code": "wrong2345678"})
         response = self.client.post(url, {"access_code": "wrong2345678"})
         self.assertContains(response, "Zu viele Fehlversuche")
+
+
+class ErrorPageTests(TestCase):
+    def test_branded_404_page(self):
+        # The test runner runs with DEBUG=False, i.e. like production.
+        response = self.client.get("/gibt-es-nicht/")
+        self.assertContains(response, "Seite nicht gefunden", status_code=404)
+
+
+class StudentHomeOrderTests(TestCase):
+    def test_urgent_assignments_first(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from worksheets.models import Assignment
+
+        teacher = make_teacher("order@example.com")
+        school_class = make_class(teacher)
+        student = Student.objects.create(school_class=school_class)
+        now = timezone.now()
+        # Created in this order (newest first by default): material, overdue, soon.
+        Assignment.objects.create(school_class=school_class, title="Material", collect_submissions=False)
+        Assignment.objects.create(school_class=school_class, title="Ueberfaellig", due_date=now - timedelta(days=1))
+        Assignment.objects.create(school_class=school_class, title="BaldFaellig", due_date=now + timedelta(hours=5))
+
+        self.client.get(reverse("schools:student_space", args=[student.access_code]))
+        response = self.client.get(reverse("schools:student_home"))
+        titles = [row["assignment"].title for row in response.context["rows"]]
+        self.assertEqual(titles, ["Ueberfaellig", "BaldFaellig", "Material"])
+        self.assertEqual(response.context["open_count"], 2)
+
+
+class ThrottlingTests(TestCase):
+    def test_client_ip_ignores_forged_forwarded_entries(self):
+        from django.test import RequestFactory
+
+        from accounts.throttling import client_ip
+
+        # Caddy appends the real client IP; earlier entries come from the client.
+        forged = RequestFactory().get(
+            "/", HTTP_X_FORWARDED_FOR="6.6.6.6, 203.0.113.9", REMOTE_ADDR="10.0.0.1"
+        )
+        self.assertEqual(client_ip(forged), "203.0.113.9")
+        plain = RequestFactory().get("/", REMOTE_ADDR="10.0.0.1")
+        self.assertEqual(client_ip(plain), "10.0.0.1")
 
 
 class QrDocumentTests(TestCase):

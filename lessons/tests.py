@@ -47,10 +47,16 @@ class TeacherLessonTests(TestCase):
         self.assertEqual(lesson.school_class, self.sc)
         self.assertContains(self.client.get(lesson.get_absolute_url()), "Magnetismus")
 
-    def test_preview_served(self):
+    def test_preview_served_isolated(self):
         lesson = Lesson.objects.create(school_class=self.sc, title="X", html=HTML)
         r = self.client.get(reverse("lessons:lesson_preview", args=[lesson.pk]))
         self.assertContains(r, "Magnetismus")
+        # Our own pages may embed it; a DENY header would blank the iframe.
+        self.assertEqual(r["X-Frame-Options"], "SAMEORIGIN")
+        # Opened directly in a tab it still runs with an opaque origin, so it
+        # can never act as the logged-in teacher.
+        self.assertIn("sandbox", r["Content-Security-Policy"])
+        self.assertNotIn("allow-same-origin", r["Content-Security-Policy"])
 
     def test_non_member_cannot_create(self):
         other = make_teacher("o@example.com")
@@ -83,8 +89,28 @@ class StudentLessonTests(TestCase):
 
     def test_play_and_content(self):
         self._session()
-        self.assertEqual(self.client.get(reverse("lessons:lesson_play", args=[self.lesson.pk])).status_code, 200)
-        self.assertContains(self.client.get(reverse("lessons:lesson_content", args=[self.lesson.pk])), "Magnetismus")
+        play = self.client.get(reverse("lessons:lesson_play", args=[self.lesson.pk]))
+        self.assertEqual(play.status_code, 200)
+        self.assertContains(play, "X-CSRFToken")  # result bridge sends the token
+        content = self.client.get(reverse("lessons:lesson_content", args=[self.lesson.pk]))
+        self.assertContains(content, "Magnetismus")
+        self.assertEqual(content["X-Frame-Options"], "SAMEORIGIN")
+        self.assertIn("sandbox", content["Content-Security-Policy"])
+
+    def test_report_requires_csrf_token(self):
+        from django.test import Client
+
+        strict = Client(enforce_csrf_checks=True)
+        strict.get(reverse("schools:student_space", args=[self.student.access_code]))
+        r = strict.post(
+            reverse("lessons:lesson_report", args=[self.lesson.pk]),
+            data=json.dumps({"score": 1, "max": 1}),
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 403)
+        self.assertFalse(
+            LessonResult.objects.filter(lesson=self.lesson, student=self.student, completed=True).exists()
+        )
 
     def test_report_result(self):
         self._session()

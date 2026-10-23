@@ -257,7 +257,7 @@ def file_download(request, file_pk):
 # --------------------------------------------------------------------------
 
 def _redirect_student_home(student):
-    return redirect("schools:student_space", token=student.access_code)
+    return redirect("schools:student_home")
 
 
 @require_POST

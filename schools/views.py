@@ -1,10 +1,16 @@
+from datetime import timedelta
+
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
-from django.core.cache import cache
 from django.db import transaction
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_POST
+
+from accounts.throttling import client_ip, is_blocked, register_failure, reset
 
 from .forms import (
     BulkStudentForm,
@@ -21,11 +27,6 @@ from .models import ClassMembership, SchoolClass, Student
 from .qr import qr_svg
 
 STUDENT_SESSION_KEY = "student_id"
-
-# Brute-force protection for student token login: at most this many failed
-# attempts per client IP per hour (like VokaGo's in-memory limiter).
-MAX_LOGIN_ATTEMPTS = 10
-LOGIN_ATTEMPT_WINDOW = 3600  # seconds
 
 
 # --------------------------------------------------------------------------
@@ -59,31 +60,22 @@ def _is_owner(user, school_class):
     ).exists()
 
 
-def _client_ip(request):
-    forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.META.get("REMOTE_ADDR", "")
-
-
+# Brute-force protection for the student token login: failed attempts are
+# counted per client IP (shared limiter, see accounts.throttling).
 def _login_attempts_key(request):
-    return f"student_login_fail:{_client_ip(request)}"
+    return f"student_login_fail:{client_ip(request)}"
 
 
 def _too_many_attempts(request):
-    return cache.get(_login_attempts_key(request), 0) >= MAX_LOGIN_ATTEMPTS
+    return is_blocked(_login_attempts_key(request))
 
 
 def _register_failed_attempt(request):
-    key = _login_attempts_key(request)
-    try:
-        cache.incr(key)
-    except ValueError:
-        cache.set(key, 1, LOGIN_ATTEMPT_WINDOW)
+    register_failure(_login_attempts_key(request))
 
 
 def _reset_attempts(request):
-    cache.delete(_login_attempts_key(request))
+    reset(_login_attempts_key(request))
 
 
 def _find_active_student(token):
@@ -116,9 +108,8 @@ def home(request):
     their space."""
     if request.user.is_authenticated:
         return redirect("schools:dashboard")
-    student = get_current_student(request)
-    if student:
-        return redirect("schools:student_space", token=student.access_code)
+    if get_current_student(request):
+        return redirect("schools:student_home")
     return render(request, "students/login.html", {"form": StudentLoginForm()})
 
 
@@ -128,10 +119,24 @@ def home(request):
 
 @login_required
 def dashboard(request):
-    my_classes = _teacher_classes(request.user).select_related("school")
-    # Classes the teacher owns in their own school vs. classes shared with them.
-    owned = [c for c in my_classes if c.school_id == request.user.school_id]
-    shared = [c for c in my_classes if c.school_id != request.user.school_id]
+    my_classes = (
+        _teacher_classes(request.user)
+        .select_related("school")
+        .annotate(
+            n_students=Count("students", filter=Q(students__is_active=True), distinct=True),
+            n_assignments=Count("assignments", distinct=True),
+            n_lessons=Count("lessons", distinct=True),
+        )
+    )
+    # "Own" vs. "shared with me" is a question of the teacher's *role* in the
+    # class, not of the school: colleagues at the same school share classes.
+    owned_ids = set(
+        ClassMembership.objects.filter(
+            teacher=request.user, role=ClassMembership.Role.OWNER
+        ).values_list("school_class_id", flat=True)
+    )
+    owned = [c for c in my_classes if c.id in owned_ids]
+    shared = [c for c in my_classes if c.id not in owned_ids]
     context = {
         "school": request.user.school,
         "owned_classes": owned,
@@ -177,7 +182,14 @@ def class_create(request):
 @login_required
 def class_detail(request, pk):
     school_class = _get_teacher_class(request.user, pk)
-    students = school_class.students.all()
+    students = list(school_class.students.all())
+    assignments = school_class.assignments.annotate(
+        n_files=Count("files", distinct=True),
+        n_submissions=Count("submissions", distinct=True),
+    )
+    lessons = school_class.lessons.annotate(
+        n_done=Count("results", filter=Q(results__completed=True), distinct=True)
+    )
     memberships = school_class.memberships.select_related("teacher")
     owner_membership = next(
         (m for m in memberships if m.role == ClassMembership.Role.OWNER), None
@@ -188,6 +200,9 @@ def class_detail(request, pk):
     context = {
         "school_class": school_class,
         "students": students,
+        "active_count": sum(1 for s in students if s.is_active),
+        "assignments": assignments,
+        "lessons": lessons,
         "student_form": StudentForm(),
         "count_form": CountStudentForm(),
         "bulk_form": BulkStudentForm(),
@@ -491,10 +506,7 @@ def student_login(request):
     a QR code). On success we redirect to the token URL, which is also what
     the QR code points at."""
     if get_current_student(request):
-        return redirect(
-            "schools:student_space",
-            token=get_current_student(request).access_code,
-        )
+        return redirect("schools:student_home")
 
     if request.method == "POST":
         if _too_many_attempts(request):
@@ -520,8 +532,13 @@ def student_login(request):
 
 
 def student_space(request, token):
-    """The QR-code target: `/s/<token>/`. Logs the pupil in and shows their
-    home page."""
+    """The QR-code target: `/s/<token>/`. Logs the pupil in and sends them to
+    their start page.
+
+    The token never stays in the address bar: after the redirect it is gone
+    from the screen, the browser history and any shared screen; the session
+    (not the URL) carries the login from here on.
+    """
     if _too_many_attempts(request):
         return render(
             request,
@@ -539,22 +556,65 @@ def student_space(request, token):
         return redirect("schools:student_login")
 
     _reset_attempts(request)
+    # New session id on login (no fixation), and a session that ends with the
+    # school day so the next pupil on a shared iPad starts fresh.
+    request.session.cycle_key()
     request.session[STUDENT_SESSION_KEY] = student.pk
+    request.session.set_expiry(settings.STUDENT_SESSION_AGE)
+    return redirect("schools:student_home")
 
+
+def student_home(request):
+    """Start page of a logged-in pupil: lessons and worksheets, each with a
+    clear status (open / due soon / overdue / done)."""
+    student = get_current_student(request)
+    if student is None:
+        return redirect("schools:student_login")
+
+    now = timezone.now()
     assignments = student.school_class.assignments.all().prefetch_related("files")
-    # Map assignment -> this student's submission (if any) for the template.
     my_subs = {
         s.assignment_id: s
-        for s in student.submissions.prefetch_related("files").all()
+        for s in student.submissions.select_related("assignment").prefetch_related("files")
     }
-    rows = [
-        {"assignment": a, "submission": my_subs.get(a.id)} for a in assignments
-    ]
-    lessons = student.school_class.lessons.all()
+    rows, open_count = [], 0
+    for a in assignments:
+        sub = my_subs.get(a.id)
+        if not a.collect_submissions:
+            status = "material"
+        elif sub:
+            status = "late" if sub.is_late else "done"
+        elif a.due_date and a.due_date < now:
+            status = "overdue"
+        elif a.due_date and a.due_date - now < timedelta(hours=48):
+            status = "soon"
+        else:
+            status = "open"
+        if status in ("open", "soon", "overdue"):
+            open_count += 1
+        rows.append({"assignment": a, "submission": sub, "status": status})
+    # Urgent things first: overdue, due soon, open; then done; material last.
+    priority = {"overdue": 0, "soon": 1, "open": 2, "late": 3, "done": 3, "material": 4}
+    rows.sort(key=lambda row: priority[row["status"]])
+
+    results = {r.lesson_id: r for r in student.lesson_results.all()}
+    lesson_rows = []
+    for lesson in student.school_class.lessons.all():
+        result = results.get(lesson.id)
+        if not (result and result.completed):
+            open_count += 1
+        lesson_rows.append({"lesson": lesson, "result": result})
+    lesson_rows.sort(key=lambda row: bool(row["result"] and row["result"].completed))
+
     return render(
         request,
         "students/home.html",
-        {"student": student, "rows": rows, "lessons": lessons},
+        {
+            "student": student,
+            "rows": rows,
+            "lesson_rows": lesson_rows,
+            "open_count": open_count,
+        },
     )
 
 

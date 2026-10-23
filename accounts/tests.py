@@ -162,6 +162,36 @@ class PasswordResetTests(TestCase):
         self.assertTrue(self.user.check_password("ganzNeues-PW-42"))
 
 
+class TeacherLoginThrottleTests(TestCase):
+    def setUp(self):
+        from django.core.cache import cache
+
+        cache.clear()
+        self.user = User.objects.create_user(
+            email="lock@example.com", password="richtig-PW-9xyz"
+        )
+
+    def test_locked_out_after_ten_failures_even_with_correct_password(self):
+        url = reverse("accounts:login")
+        for _ in range(10):
+            self.client.post(url, {"username": "lock@example.com", "password": "falsch"})
+        response = self.client.post(
+            url, {"username": "lock@example.com", "password": "richtig-PW-9xyz"}
+        )
+        self.assertContains(response, "Zu viele Fehlversuche")
+        self.assertFalse(response.wsgi_request.user.is_authenticated)
+
+    def test_successful_login_resets_counter(self):
+        url = reverse("accounts:login")
+        for _ in range(3):
+            self.client.post(url, {"username": "lock@example.com", "password": "falsch"})
+        response = self.client.post(
+            url, {"username": "lock@example.com", "password": "richtig-PW-9xyz"}
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.wsgi_request.user.is_authenticated)
+
+
 class UserModelTests(TestCase):
     def test_email_is_normalised_and_login_case_insensitive(self):
         User.objects.create_user(email="Mix@Example.com", password="pw-strong-xyz-1")

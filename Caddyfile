@@ -6,6 +6,12 @@
 {$DOMAIN} {
 	encode gzip zstd
 
+	# Uploads are limited to 25 MB per file in the app; cap the whole request
+	# here so an oversized upload is rejected before it can fill the disk.
+	request_body {
+		max_size 60MB
+	}
+
 	# Serve collected static files (CSS/JS) straight from disk.
 	handle_path /static/* {
 		root * /srv/static

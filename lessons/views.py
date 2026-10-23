@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.http import require_POST
 
 from schools.models import ClassMembership, SchoolClass
@@ -31,6 +31,21 @@ def _teacher_lesson_or_404(user, pk):
         .distinct(),
         pk=pk,
     )
+
+
+# Lesson HTML is authored by teachers or by an AI through the API, i.e. it is
+# untrusted code served from our own domain. The CSP ``sandbox`` directive
+# gives the document an opaque origin *even when opened directly in a tab*,
+# so it can never read the platform's cookies or call teacher endpoints as the
+# logged-in user. Our own pages embed it in an iframe with the same sandbox
+# attribute; ``xframe_options_sameorigin`` lets exactly those pages do that.
+LESSON_CSP = "sandbox allow-scripts allow-forms allow-popups"
+
+
+def _lesson_html_response(html):
+    response = HttpResponse(html or "<p>Noch kein Inhalt.</p>")
+    response["Content-Security-Policy"] = LESSON_CSP
+    return response
 
 
 # --------------------------------------------------------------------------
@@ -100,11 +115,12 @@ def lesson_detail(request, pk):
 
 
 @login_required
+@xframe_options_sameorigin
 def lesson_preview(request, pk):
-    """Serve the lesson's HTML to the teacher for preview (sandboxed in the
-    detail page's iframe)."""
+    """Serve the lesson's HTML to the teacher for preview (sandboxed, see
+    ``_lesson_html_response``)."""
     lesson = _teacher_lesson_or_404(request.user, pk)
-    return HttpResponse(lesson.html or "<p>Noch kein Inhalt.</p>")
+    return _lesson_html_response(lesson.html)
 
 
 @login_required
@@ -143,18 +159,21 @@ def lesson_play(request, pk):
     return render(request, "lessons/lesson_play.html", {"lesson": lesson, "student": student})
 
 
+@xframe_options_sameorigin
 def lesson_content(request, pk):
     """Serve the raw lesson HTML for the student's sandboxed iframe."""
     student, lesson = _student_lesson_or_404(request, pk)
     if student is None or lesson is None:
         raise Http404
-    return HttpResponse(lesson.html or "<p>Noch kein Inhalt.</p>")
+    return _lesson_html_response(lesson.html)
 
 
-@csrf_exempt
 @require_POST
 def lesson_report(request, pk):
-    """Record a result reported by the lesson HTML (via postMessage -> fetch)."""
+    """Record a result reported by the lesson HTML.
+
+    The sandboxed iframe posts a message to the player page, which forwards
+    it here with the regular CSRF token (so no CSRF exemption is needed)."""
     student, lesson = _student_lesson_or_404(request, pk)
     if student is None or lesson is None:
         raise Http404

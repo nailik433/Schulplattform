@@ -10,6 +10,8 @@ and on a rented server (Postgres, DEBUG off) without changes. See
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -27,16 +29,22 @@ def env_list(name, default=""):
     return [item.strip() for item in raw.split(",") if item.strip()]
 
 
-# SECURITY WARNING: keep the secret key used in production secret!
-# In production, set DJANGO_SECRET_KEY. The insecure fallback only applies
-# in DEBUG mode so a forgotten variable fails loudly in production.
-SECRET_KEY = os.environ.get(
-    "DJANGO_SECRET_KEY",
-    "django-insecure-yo#tmhv51@(w$)21snns$1!r=b86prgpl0$ax81io4&pybb)n@",
-)
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env_bool("DJANGO_DEBUG", default=True)
+
+# SECURITY WARNING: keep the secret key used in production secret!
+# The insecure fallback is only ever used in DEBUG mode. In production a
+# missing DJANGO_SECRET_KEY stops the app from starting instead of silently
+# signing sessions with a key that is public on GitHub.
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "").strip()
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = "django-insecure-nur-fuer-lokale-entwicklung"
+    else:
+        raise ImproperlyConfigured(
+            "DJANGO_SECRET_KEY ist nicht gesetzt. Bitte in der .env eintragen "
+            "(erzeugen mit: python -c \"import secrets; print(secrets.token_urlsafe(50))\")."
+        )
 
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", default="localhost,127.0.0.1")
 
@@ -189,6 +197,22 @@ SITE_URL = os.environ.get("DJANGO_SITE_URL", "")
 SUBMISSION_RETENTION_DAYS = int(
     os.environ.get("DJANGO_SUBMISSION_RETENTION_DAYS", "400")
 )
+
+# Cache: holds the failed-login counters for brute-force protection. A
+# file-based cache is shared by all gunicorn workers in the container, so the
+# limits hold for the whole server (the default in-memory cache is per process).
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.filebased.FileBasedCache",
+        "LOCATION": str(BASE_DIR / ".cache"),
+        "TIMEOUT": 3600,
+    }
+}
+
+# Students log in on shared classroom iPads, so their session must not outlive
+# the school day; otherwise the next pupil would land in the previous one's
+# space. Teachers keep Django's default session length.
+STUDENT_SESSION_AGE = int(os.environ.get("DJANGO_STUDENT_SESSION_HOURS", "10")) * 3600
 
 
 # Internationalization

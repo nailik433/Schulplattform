@@ -1,144 +1,107 @@
 # Schulplattform
 
-Eine Online-Plattform, mit der Lehrkräfte Klassen verwalten, digitale
-Arbeitsblätter austeilen und Abgaben ihrer Schüler/innen einsammeln können –
-für die Nutzung von der Schule **und** von zu Hause. Läuft komplett auf einem
-eigenen (gemieteten) Server, z. B. bei Hostinger.
+Eine selbst gehostete Plattform für den Unterricht: Lehrkräfte verwalten
+Klassen, teilen digitale **Arbeitsblätter** aus, sammeln **Abgaben** ein und
+stellen **interaktive Lernumgebungen** bereit – von Claude direkt in die
+Klasse geschrieben. Schüler/innen melden sich **ohne Konto** an, nur mit einem
+6-stelligen Zugangscode oder per QR-Code.
 
-Schüler/innen melden sich **ohne E-Mail und ohne Passwort** an – nur mit einem
-persönlichen, zufälligen **Zugangscode**, den die Lehrkraft erzeugt.
+Läuft komplett auf einem eigenen, gemieteten Server (Docker + automatisches
+HTTPS), z. B. bei Hetzner. Live-Instanz: `https://hebid.de`.
 
 ---
 
-## Was schon funktioniert
+## Was die Plattform kann
 
-**Zugang & Verwaltung**
+**Schüler/innen (iPad & Smartphone zuerst)**
+- Anmeldung per **6-stelligem Code** oder **QR-Scan** – kein Name, keine
+  E-Mail, kein Passwort. Anonyme Kennungen wie `7b-001`.
+- Startseite **„Meine Aufgaben"** mit klarem Status: offen · bald fällig ·
+  Frist vorbei · abgegeben; Lernumgebungen mit erledigt/Punkten.
+- **Lernumgebungen** bildschirmfüllend öffnen (interaktive HTML-Seiten mit
+  Animationen und Aufgaben, isoliert in einer Sandbox).
+- Abgaben **hochladen** – auch direkt als Foto vom Handy.
+- Sitzung endet automatisch mit dem Schultag (geteilte iPads).
 
-- **Schulen** legt ausschließlich der/die Plattform-Betreiber/in im
-  **Admin-Bereich** (`/admin/`) an. Lehrkräfte können keine Schulen erstellen.
-- **Lehrkräfte registrieren sich nicht frei**, sondern gelangen auf zwei Wegen
-  zu einem Konto – jeweils fest einer Schule zugeordnet:
-  - **Einladung**: Der Betreiber erstellt im Admin eine Einladung (E-Mail +
-    Schule); die Lehrkraft öffnet den Einladungslink, setzt Name + Passwort –
-    fertig. Der Link wird im Admin angezeigt (zum Weitergeben) und, falls
-    E-Mail konfiguriert ist, automatisch verschickt.
-  - **Anfrage**: Die Lehrkraft stellt über `/konto/anfrage/` eine Beitritts-
-    anfrage zu einer Schule. Der Betreiber genehmigt sie im Admin – dabei wird
-    automatisch eine Einladung erzeugt.
-- **Login** per E-Mail-Adresse und Passwort.
+**Lehrkräfte**
+- Login per E-Mail + Passwort (mit Brute-Force-Schutz), Passwort-Reset per
+  E-Mail. Konten nur per **Einladung** oder genehmigter **Zugangsanfrage**,
+  fest einer Schule zugeordnet.
+- **Klassen** anlegen; Schüler/innen als anonyme Plätze, als Namensliste oder
+  per **Import** bestehender Tokens (z. B. zwei Excel-Spalten aus Fobizz).
+  Tokens neu erzeugen, ändern, deaktivieren; Mehrfach-Löschen; Klasse nur mit
+  getippter Bestätigung löschen.
+- **QR-Druckdokument** (A4, bis 31 Karten pro Seite) + vertrauliche
+  Lehrerliste zur handschriftlichen Namenszuordnung.
+- **Arbeitsblätter** austeilen (Drag & Drop oder Dateiauswahl, Frist,
+  Abgaben ein/aus); Abgabe-Übersicht mit „verspätet"-Markierung.
+- **Alle Abgaben als ZIP** herunterladen – pro Schüler/in ein Ordner
+  (`7b-001/…`), ideal für die KI-gestützte Bewertung.
+- **Lernumgebungen** anlegen (HTML einfügen oder per API) mit
+  Ergebnis-Übersicht pro Schüler/in (Status, Punkte, Prozent).
+- **Klassen mit Kolleg/innen teilen**: Kolleg/innen sehen nur die geteilte
+  Klasse, nie die anderen Kurse.
 
-**Klassen & Schüler/innen**
+**KI-Schnittstelle („Weg B": Cowork / Claude Code)**
+- Jede Lehrkraft hat einen **API-Schlüssel** (Dashboard → „KI & API").
+- `GET /api/classes` · `POST /api/lessons` – Claude baut die Lernumgebung
+  und legt sie **direkt in der richtigen Klasse** ab.
+- [`docs/COWORK-BRIEFING.md`](docs/COWORK-BRIEFING.md): Projekt-Anweisung
+  für Cowork (API-Weg). [`mcp/`](mcp/README.md): lokaler **MCP-Connector**
+  für Claude Code / Claude Desktop mit fertigen Werkzeugen.
 
-- **Klassen** (z. B. „5a – Informatik“) legt die Lehrkraft in **ihrer** Schule an.
-- **Schüler/innen anlegen** auf drei Wegen: als Anzahl anonymer Plätze
-  (#001, #002 …), einzeln mit optionalem Namen, oder als Namensliste. Jede/r
-  bekommt automatisch eine fortlaufende Nummer und einen eindeutigen
-  **6-stelligen Token** (Kleinbuchstaben + Ziffern, ohne verwechselbare Zeichen).
-- **Tokens verwalten**: neu erzeugen, deaktivieren/aktivieren, entfernen.
-- **Schüler-Login** ohne Konto – nur per Token: entweder auf der Startseite
-  (`/s/`) eintippen oder den **QR-Code scannen**, der direkt auf `/s/<token>/`
-  führt und einloggt. Ein Brute-Force-Schutz begrenzt Fehlversuche pro IP.
-- **QR-Druckdokument** pro Klasse (`🖨️`): A4-Seiten mit QR-Karten im
-  3×5-Raster zum Ausschneiden plus eine vertrauliche Lehrerliste für die
-  handschriftliche Namenszuordnung. Die QR-Codes werden **lokal auf dem
-  Server** erzeugt – die Tokens verlassen den Server nicht.
-- **Zugriffsschutz**: Eine Lehrkraft sieht ausschließlich ihre eigenen Klassen.
+**Betrieb & Datenschutz**
+- Docker Compose (Gunicorn + PostgreSQL + Caddy mit Let's-Encrypt-HTTPS),
+  WhiteNoise für statische Dateien, Uploads nur über zugriffsgeprüfte Views.
+- Setup-, Update-, Backup- und Cron-Skripte in [`scripts/`](scripts/);
+  **Auto-Deploy** per GitHub Actions ([`docs/AUTO-DEPLOY.md`](docs/AUTO-DEPLOY.md)).
+- Löschkonzept (`purge_submissions`), Impressum/Datenschutz-Vorlagen,
+  Datensparsamkeit (von Schüler/innen nur Nummer + Zugangscode).
 
-**Klassen mit Kolleg/innen teilen**
+---
 
-- Der/die **Inhaber/in** einer Klasse kann sie an **Kolleg/innen** freigeben
-  (per E-Mail; müssen registriert und an derselben Schule sein) und die
-  Freigabe wieder entziehen.
-- Freigegebene Kolleg/innen sehen die Klasse unter „Mit mir geteilte Klassen"
-  und können voll mitarbeiten (Schüler/innen, Arbeitsblätter, Abgaben) –
-  aber **nur diese Klasse**, nie die übrigen Kurse der Inhaberin/des Inhabers,
-  und sie können die Freigabe selbst nicht verwalten. Umgesetzt über die
-  Rollen `Inhaber` / `Kollege/Kollegin` pro Klasse; alle Lehrer-Aktionen
-  prüfen die Mitgliedschaft.
+## Sicherheitskonzept (Kurzfassung)
 
-**Arbeitsblätter austeilen**
-
-- Eine Lehrkraft legt in einer Klasse **Arbeitsblätter** an (Titel,
-  Beschreibung, optionale Frist) und hängt **eine oder mehrere Dateien** an
-  (z. B. PDFs, max. 25 MB/Datei).
-- **Schüler/innen** sehen die Arbeitsblätter nach dem Login auf ihrer
-  Startseite und können die Dateien herunterladen.
-- **Geschützte Downloads**: Dateien werden nicht über öffentliche URLs
-  ausgeliefert, sondern nur über eine zugriffsgeprüfte View – erreichbar für
-  die Lehrkräfte der Klasse und deren Schüler/innen, sonst nicht.
-
-**Abgaben einsammeln**
-
-- Pro Arbeitsblatt lässt sich das Einsammeln von **Abgaben** aktivieren
-  (Standard) oder abschalten (reines Material).
-- **Schüler/innen** laden ihre Lösung(en) direkt auf ihrer Startseite hoch,
-  sehen ihre eigenen Dateien und können sie wieder entfernen. Abgaben nach der
-  Frist werden als **verspätet** markiert.
-- **Lehrkräfte** sehen je Arbeitsblatt eine **Abgabe-Übersicht** (wer hat
-  abgegeben, wann, verspätet?) und laden die abgegebenen Dateien herunter.
-- **Vertraulichkeit**: Abgabe-Dateien sind nur für die Lehrkräfte der Klasse
-  und die jeweils abgebende Person zugänglich – kein/e Schüler/in sieht die
-  Abgaben anderer.
-
-**Erste Schritte als Betreiber:** nach `createsuperuser` im Admin (`/admin/`)
-zuerst eine oder mehrere **Schulen** anlegen, dann Lehrkräfte per **Einladung**
-einladen oder eingegangene **Zugangsanfragen** genehmigen.
-
-## Betrieb & Datenschutz (bereits vorhanden)
-
-- **Passwort-Zurücksetzen** für Lehrkräfte per E-Mail (`/konto/passwort/reset/`).
-- **Impressum & Datenschutzerklärung** als Vorlagen (Footer-Links) – vor dem
-  Einsatz die [Platzhalter] ausfüllen und rechtlich prüfen lassen.
-- **Löschkonzept**: `python manage.py purge_submissions` entfernt alte Abgaben
-  (Frist über `DJANGO_SUBMISSION_RETENTION_DAYS`) – per Cron automatisierbar.
-- **Backups**: `./scripts/backup.sh` sichert Datenbank + Uploads.
-
-Details und Cron-Beispiele stehen in [`DEPLOY.md`](DEPLOY.md).
+- **Lernumgebungs-HTML ist fremder Code.** Es wird mit
+  `Content-Security-Policy: sandbox` ausgeliefert und nur in sandboxed
+  iframes eingebettet – es läuft immer mit opaker Origin und kann weder
+  Cookies lesen noch als Lehrkraft handeln, auch wenn man es direkt öffnet.
+- **Token nie in der URL halten:** Der QR-Link `/s/<token>/` loggt ein und
+  leitet sofort auf `/start/` um.
+- **Brute-Force-Schutz** für Schüler-Code *und* Lehrer-Login (pro IP bzw.
+  pro IP + E-Mail, serverweit über einen geteilten Cache); `X-Forwarded-For`
+  wird nur in der vom Proxy gesetzten Form vertraut.
+- Produktion startet **nicht ohne gesetzten `DJANGO_SECRET_KEY`**; HSTS,
+  sichere Cookies, SSL-Redirect, `X-Frame-Options: DENY` (außer für die
+  eigenen Lernumgebungs-Frames: `SAMEORIGIN`).
+- Upload-Limit pro Datei (25 MB) in der App und pro Request am Proxy.
 
 ---
 
 ## Technologie
 
-- **Python 3.11+ / Django 5.1** – Backend, Auth, Datenbank-ORM und ein fertiger
-  Admin-Bereich.
-- **SQLite** für die lokale Entwicklung, **PostgreSQL** für den Produktivbetrieb
-  (per Umgebungsvariablen umschaltbar, kein Code-Änderung nötig).
-- Server-gerendertes HTML mit schlankem CSS (keine Frontend-Build-Kette nötig –
-  läuft daher auf sehr einfachem Hosting).
-
-**Warum Django?** Die Anforderungen (Nutzerkonten, Rollen/Rechte, viel
-Verwaltung von Klassen und Schüler/innen, Datei-Uploads) deckt Django von Haus
-aus ab. Der mitgelieferte Admin-Bereich spart viel Verwaltungs-Code, und ein
-Django-Projekt lässt sich auf praktisch jedem gemieteten Linux-Server (inkl.
-Hostinger VPS) mit Gunicorn + Nginx betreiben.
+- **Python 3.11+ / Django 5.1** – Backend, Auth, ORM, Admin.
+- **SQLite** lokal, **PostgreSQL** in Produktion (per Umgebungsvariablen).
+- Server-gerendertes HTML + schlankes CSS (Apple-artiges, ruhiges Design,
+  iPad-optimiert) – keine Frontend-Build-Kette.
 
 ---
 
 ## Lokale Einrichtung
 
 ```bash
-# 1. Virtuelle Umgebung anlegen und Abhängigkeiten installieren
-python3 -m venv .venv
-source .venv/bin/activate
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-
-# 2. Datenbank vorbereiten
 python manage.py migrate
-
-# 3. Admin-Zugang anlegen (optional, für /admin/)
-python manage.py createsuperuser
-
-# 4. Entwicklungsserver starten
+python manage.py createsuperuser        # für /admin/
 python manage.py runserver
 ```
 
-Dann im Browser: <http://127.0.0.1:8000/>
+Dann <http://127.0.0.1:8000/>: Im Admin eine **Schule** anlegen und dich ihr
+zuordnen → Klasse anlegen → Schüler/innen hinzufügen → QR-Dokument drucken.
+Schüler-Login testen unter <http://127.0.0.1:8000/s/>.
 
-- Lehrer-Konto anlegen: **Lehrer-Konto erstellen**
-- Danach: Schule anlegen → Klasse anlegen → Schüler/innen hinzufügen
-- Schüler-Login testen: <http://127.0.0.1:8000/s/anmelden/>
-
-### Tests
+Tests:
 
 ```bash
 python manage.py test
@@ -146,33 +109,21 @@ python manage.py test
 
 ---
 
-## Betrieb auf einem eigenen Server (Kurzfassung)
+## Betrieb auf dem eigenen Server
 
-Die produktionsrelevanten Einstellungen werden über Umgebungsvariablen
-gesteuert – Vorlage siehe [`.env.example`](.env.example).
+Schritt für Schritt in [`docs/SERVER-HETZNER.md`](docs/SERVER-HETZNER.md).
+Kurz: Server + Domain → `git clone` → `bash scripts/server-setup.sh` →
+`createsuperuser` → `bash scripts/install-cron.sh`. Updates danach über das
+Auto-Deploy (oder `bash scripts/update.sh`).
 
-1. **Abhängigkeiten**: in `requirements.txt` die auskommentierten Produktions-
-   Pakete aktivieren (`gunicorn`, `psycopg[binary]`, `whitenoise`).
-2. **`.env` befüllen**: sicheren `DJANGO_SECRET_KEY` setzen, `DJANGO_DEBUG=false`,
-   deine Domain in `DJANGO_ALLOWED_HOSTS` und `DJANGO_CSRF_TRUSTED_ORIGINS`,
-   sowie die PostgreSQL-Zugangsdaten.
-3. **Datenbank & statische Dateien**:
-   ```bash
-   python manage.py migrate
-   python manage.py collectstatic --no-input
-   ```
-4. **App-Server**: `gunicorn config.wsgi:application` hinter einem Reverse Proxy
-   (Nginx), TLS-Zertifikat z. B. via Let's Encrypt.
-5. Bei `DJANGO_DEBUG=false` schaltet die App automatisch HTTPS-Erzwingung,
-   sichere Cookies und HSTS ein.
+Arbeitsplan für die nächsten Schritte: [`docs/NAECHSTE-SCHRITTE.md`](docs/NAECHSTE-SCHRITTE.md).
 
 ---
 
 ## Datenschutz (DSGVO)
 
-Es werden personenbezogene Daten von Minderjährigen verarbeitet. Vor einem
-echten Einsatz an einer Schule sind u. a. zu klären: Rechtsgrundlage/Einwilligung,
-Auftragsverarbeitung, Serverstandort (EU), Löschkonzept und Freigabe durch die
-Schulleitung bzw. den/die Datenschutzbeauftragte/n. Die Plattform speichert
-bewusst so wenig wie möglich – von Schüler/innen nur einen Anzeigenamen und den
-Zugangscode, keine E-Mail-Adressen oder Passwörter.
+Es werden Daten von Minderjährigen verarbeitet. Vor dem Einsatz an einer
+Schule sind u. a. zu klären: Rechtsgrundlage, Auftragsverarbeitung,
+Serverstandort (EU), Löschkonzept und die Freigabe durch Schulleitung bzw.
+Datenschutzbeauftragte/n. Die Plattform speichert bewusst so wenig wie
+möglich – von Schüler/innen standardmäßig nur eine Nummer und den Zugangscode.

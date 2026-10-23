@@ -3,68 +3,52 @@
 {% block title %}Meine Klassen{% endblock %}
 
 {% block content %}
-<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+<div class="page-head">
     <div>
         <h1>Meine Klassen</h1>
         {% if school %}
-            <p class="subtitle">Schule: <strong>{{ school.name }}</strong></p>
+            <p class="subtitle">{{ school.name }}</p>
         {% else %}
             <p class="subtitle">Dir ist noch keine Schule zugeordnet.</p>
         {% endif %}
     </div>
-    {% if school %}
-        <a class="btn" href="{% url 'schools:class_create' %}">+ Klasse anlegen</a>
-    {% endif %}
+    <div class="actions-cell">
+        <a class="btn btn-secondary" href="{% url 'lessons:api_key' %}">🧪 KI &amp; API</a>
+        {% if school %}
+            <a class="btn" href="{% url 'schools:class_create' %}">+ Klasse anlegen</a>
+        {% endif %}
+    </div>
 </div>
-
-<p class="muted" style="margin-top:-6px;">
-    🧪 <a href="{% url 'lessons:api_key' %}">KI-Prompt &amp; API</a> – interaktive Lernumgebungen von Claude bauen lassen.
-</p>
 
 {% if not school %}
     <div class="card">
-        <p>
+        <p style="margin:0;">
             Deinem Konto ist noch keine Schule zugeordnet. Bitte wende dich an
             die Administration der Plattform.
         </p>
     </div>
 {% endif %}
 
-<h2>Eigene Klassen</h2>
 {% if owned_classes %}
     <div class="grid">
         {% for c in owned_classes %}
-            <a class="card" style="display:block;text-decoration:none;color:inherit;margin:0;"
-               href="{{ c.get_absolute_url }}">
-                <strong>{{ c.name }}</strong>
-                {% if c.subject %}<div class="muted">{{ c.subject }}</div>{% endif %}
-                <div class="muted" style="margin-top:6px;">
-                    {{ c.active_student_count }} Schüler/innen
-                </div>
-            </a>
+            {% include "schools/_class_card.html" with c=c %}
         {% endfor %}
     </div>
 {% else %}
-    <div class="card">
-        <p class="muted">
-            Noch keine eigenen Klassen.
-            {% if school %}Lege oben rechts deine erste Klasse an.{% endif %}
+    <div class="card empty-state">
+        <div class="empty-icon">🏫</div>
+        <p class="muted" style="margin:0;">
+            Noch keine eigenen Klassen.{% if school %} Lege oben rechts deine erste Klasse an.{% endif %}
         </p>
     </div>
 {% endif %}
 
 {% if shared_classes %}
-    <h2>Mit mir geteilte Klassen</h2>
+    <h2 class="section-title">Mit mir geteilte Klassen</h2>
     <div class="grid">
         {% for c in shared_classes %}
-            <a class="card" style="display:block;text-decoration:none;color:inherit;margin:0;"
-               href="{{ c.get_absolute_url }}">
-                <strong>{{ c.name }}</strong>
-                {% if c.subject %}<div class="muted">{{ c.subject }}</div>{% endif %}
-                <div class="muted" style="margin-top:6px;">
-                    {{ c.school.name }} · {{ c.active_student_count }} Schüler/innen
-                </div>
-            </a>
+            {% include "schools/_class_card.html" with c=c shared=True %}
         {% endfor %}
     </div>
 {% endif %}

@@ -76,8 +76,12 @@ unter `hebid.de` live.
       bash scripts/update.sh
       ```
 - [ ] Im Browser `https://hebid.de` öffnen und prüfen: Login klappt, im
-      Dashboard gibt es den Punkt **„KI-Prompt & API"**, auf einer
+      Dashboard gibt es den Button **„KI & API"**, auf einer
       Arbeitsblatt-Seite den Button **„Alle Abgaben (ZIP)"**.
+- [ ] Einmalig die Wartung automatisieren (tägliches Backup + Löschkonzept):
+      ```bash
+      bash scripts/install-cron.sh
+      ```
 
 ---
 

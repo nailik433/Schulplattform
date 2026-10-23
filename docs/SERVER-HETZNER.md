@@ -14,7 +14,7 @@ Server, einen Domainnamen und ein Terminal (Mac/Linux: „Terminal"; Windows:
 > einloggen und den Code holen:
 > ```bash
 > apt update && apt install -y git
-> git clone --branch claude/school-platform-worksheets-c0x6aj https://github.com/nailik433/Schulplattform.git schulplattform
+> git clone https://github.com/nailik433/Schulplattform.git schulplattform
 > cd schulplattform && bash scripts/server-setup.sh
 > ```
 > Das Setup-Skript erledigt Docker, Firewall, Schlüssel und Start automatisch
@@ -156,11 +156,14 @@ Dann im Browser `https://deine-domain.de/admin/` anmelden und:
 
 ## 9. Wartung automatisieren (Cron)
 
+Am einfachsten mit dem fertigen Skript (richtet tägliches Backup und das
+monatliche Löschen alter Abgaben ein):
+
 ```bash
-crontab -e
+bash scripts/install-cron.sh
 ```
 
-Am Ende einfügen (Pfad ggf. anpassen):
+Oder von Hand mit `crontab -e` am Ende einfügen (Pfad ggf. anpassen):
 
 ```cron
 # Tägliches Backup um 2:30 Uhr

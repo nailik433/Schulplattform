@@ -59,6 +59,7 @@ urlpatterns = [
         name="student_set_token",
     ),
     # Student area. Literal routes first, then the token catch-all.
+    path("start/", views.student_home, name="student_home"),
     path("s/", views.student_login, name="student_login"),
     path("s/abmelden/", views.student_logout, name="student_logout"),
     path("s/<str:token>/", views.student_space, name="student_space"),

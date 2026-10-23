@@ -3,11 +3,15 @@
 {% block title %}{{ lesson.title }}{% endblock %}
 
 {% block content %}
-<p class="muted"><a href="{% url 'schools:class_detail' lesson.school_class.pk %}">← {{ lesson.school_class.name }}</a></p>
+<a class="back-link" href="{% url 'schools:class_detail' lesson.school_class.pk %}">← {{ lesson.school_class.name }}</a>
 
-<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
-    <h1>{{ lesson.title }}</h1>
+<div class="page-head">
+    <div>
+        <h1>🧪 {{ lesson.title }}</h1>
+        <p class="subtitle">Lernumgebung · zuletzt geändert {{ lesson.updated_at|date:"d.m.Y H:i" }}</p>
+    </div>
     <div class="actions-cell">
+        <a class="btn btn-secondary btn-small" href="{% url 'lessons:lesson_preview' lesson.pk %}" target="_blank" rel="noopener">In neuem Tab öffnen ↗</a>
         <a class="btn btn-secondary btn-small" href="{% url 'lessons:lesson_edit' lesson.pk %}">Bearbeiten</a>
         <form class="inline-form" method="post" action="{% url 'lessons:lesson_delete' lesson.pk %}"
               onsubmit="return confirm('Lernumgebung „{{ lesson.title|escapejs }}“ wirklich löschen?');">
@@ -18,16 +22,20 @@
 </div>
 
 <div class="card" style="padding:0;overflow:hidden;">
-    <div style="padding:10px 16px;border-bottom:1px solid var(--border-soft);" class="muted">Vorschau</div>
-    <iframe src="{% url 'lessons:lesson_preview' lesson.pk %}" sandbox="allow-scripts allow-forms allow-popups"
-            style="width:100%;height:520px;border:0;display:block;background:#fff;"></iframe>
+    <div style="padding:10px 16px;border-bottom:1px solid var(--border-soft);" class="muted">Vorschau – so sehen es die Schüler/innen</div>
+    <iframe src="{% url 'lessons:lesson_preview' lesson.pk %}" title="Vorschau: {{ lesson.title }}"
+            sandbox="allow-scripts allow-forms allow-popups"
+            style="width:100%;height:560px;border:0;display:block;background:#fff;"></iframe>
 </div>
 
-<p class="muted">
-    Schüler/innen öffnen diese Lernumgebung nach dem Login auf ihrer Startseite.
-</p>
-
-<h2>Ergebnisse <span class="muted" style="font-weight:400;">({{ done_count }}/{{ roster_count }} fertig)</span></h2>
+<div class="section-head">
+    <h2>Ergebnisse</h2>
+    {% if done_count >= roster_count and roster_count %}
+        <span class="chip chip-ok">{{ done_count }}/{{ roster_count }} fertig</span>
+    {% else %}
+        <span class="chip">{{ done_count }}/{{ roster_count }} fertig</span>
+    {% endif %}
+</div>
 <div class="card" style="padding:0;overflow-x:auto;">
     <table class="data">
         <thead>
@@ -39,24 +47,27 @@
                     <td>{{ lesson.school_class.name }}-{{ row.student.number_padded }}</td>
                     <td>
                         {% if row.result and row.result.completed %}
-                            <span class="badge">fertig · {{ row.result.updated_at|date:"d.m.Y H:i" }}</span>
+                            <span class="chip chip-ok">✓ fertig · {{ row.result.updated_at|date:"d.m.Y H:i" }}</span>
                         {% elif row.result %}
-                            <span class="badge inactive">geöffnet</span>
+                            <span class="chip chip-info">geöffnet</span>
                         {% else %}
-                            <span class="muted">offen</span>
+                            <span class="chip">offen</span>
                         {% endif %}
                     </td>
                     <td>
                         {% if row.result and row.result.max_score %}
-                            {{ row.result.score|floatformat:"-2" }} / {{ row.result.max_score|floatformat:"-2" }}
-                            {% if row.result.percent is not None %}({{ row.result.percent }} %){% endif %}
+                            <strong>{{ row.result.score|floatformat:"-2" }}</strong> / {{ row.result.max_score|floatformat:"-2" }}
+                            {% if row.result.percent is not None %}<span class="muted">({{ row.result.percent }} %)</span>{% endif %}
                         {% else %}
                             <span class="muted">—</span>
                         {% endif %}
                     </td>
                 </tr>
+            {% empty %}
+                <tr><td colspan="3" class="muted">Noch keine aktiven Schüler/innen in dieser Klasse.</td></tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
+<p class="muted">Schüler/innen finden die Lernumgebung nach dem Login unter „Meine Aufgaben".</p>
 {% endblock %}

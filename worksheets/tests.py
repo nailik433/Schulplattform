@@ -103,7 +103,8 @@ class WorksheetTests(TestCase):
     def test_student_sees_assignment_on_home(self):
         self._make_assignment_with_file()
         response = self.client.get(
-            reverse("schools:student_space", args=[self.student.access_code])
+            reverse("schools:student_space", args=[self.student.access_code]),
+            follow=True,
         )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "AB")
