@@ -113,6 +113,25 @@ def klassen_auflisten() -> str:
 
 
 @mcp.tool()
+def lernumgebungen_auflisten(klasse_id: int) -> str:
+    """Listet die vorhandenen Lernumgebungen einer Klasse (ID, Titel, zuletzt
+    geändert, Lehrer-URL) – z. B. um eine davon zu aktualisieren.
+
+    Args:
+        klasse_id: ID der Klasse (aus `klassen_auflisten`).
+    """
+    data = _request("GET", f"/api/lessons?class_id={int(klasse_id)}")
+    lessons = data.get("lessons", [])
+    if not lessons:
+        return "In dieser Klasse gibt es noch keine Lernumgebungen."
+    zeilen = [
+        f"- ID {l['id']}: {l['title']} · geändert {l.get('updated_at', '')} · {l.get('teacher_url', '')}"
+        for l in lessons
+    ]
+    return "Lernumgebungen:\n" + "\n".join(zeilen)
+
+
+@mcp.tool()
 def lernumgebung_anlegen(klasse_id: int, titel: str, html: str) -> str:
     """Legt eine neue interaktive Lernumgebung in einer Klasse an.
 

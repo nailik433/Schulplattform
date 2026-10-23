@@ -1,35 +1,48 @@
 {% extends "base.html" %}
 
-{% block title %}API & KI-Prompt{% endblock %}
+{% block title %}KI & API{% endblock %}
 
 {% block content %}
-<p class="muted"><a href="{% url 'schools:dashboard' %}">← Meine Klassen</a></p>
+<a class="back-link" href="{% url 'schools:dashboard' %}">← Meine Klassen</a>
 
-<h1>KI-Schnittstelle & Prompt</h1>
-<p class="subtitle">
-    So lässt du dir von Claude interaktive, animierte Lernumgebungen bauen und
-    bringst sie in die Plattform.
-</p>
+<div class="page-head">
+    <div>
+        <h1>🧪 KI &amp; API</h1>
+        <p class="subtitle">
+            So lässt du dir von Claude interaktive Lernumgebungen bauen – und direkt in die Klasse legen.
+        </p>
+    </div>
+</div>
 
 <div class="card" style="border-color:var(--info-border);background:var(--info-bg);">
-    <h2 style="margin-top:0;">Empfohlen: direkt aus Cowork oder Claude Code</h2>
-    <p style="margin:0 0 8px;">
-        Am bequemsten lässt du Claude die Lernumgebung <strong>direkt in die Klasse schreiben</strong> – ohne Kopieren:
+    <h2 style="margin-top:0;">1. Cowork / claude.ai: Connector einmal hinzufügen (empfohlen)</h2>
+    <p style="margin:0 0 10px;">
+        Danach hat Claude in <strong>Cowork</strong> fertige Werkzeuge („Klassen auflisten", „Lernumgebung anlegen", …)
+        und schreibt Lernumgebungen <strong>direkt in deine Klasse</strong> – ohne Kopieren, ohne Chrome.
     </p>
-    <ul style="margin:0;padding-left:20px;">
-        <li><strong>Cowork:</strong> das
-            <a href="https://github.com/nailik433/Schulplattform/blob/main/docs/COWORK-BRIEFING.md" target="_blank" rel="noopener">Cowork-Briefing</a>
-            in die Projekt-Anweisungen einfügen und deinen API-Schlüssel (unten) eintragen.</li>
-        <li><strong>Claude Code / Claude Desktop:</strong> den
-            <a href="https://github.com/nailik433/Schulplattform/blob/main/mcp/README.md" target="_blank" rel="noopener">MCP-Connector</a>
-            einmal registrieren – dann hat Claude fertige Werkzeuge („Klassen auflisten", „Lernumgebung anlegen").</li>
-    </ul>
+    <p style="margin:0 0 6px;"><strong>Deine persönliche Connector-URL</strong> (enthält deinen Schlüssel – nicht weitergeben):</p>
+    <p><input id="mcp-url" type="text" readonly value="{{ base_url }}/mcp/{{ api_key.key }}/"
+             style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:0.9rem;"></p>
+    <div class="form-actions" style="margin-bottom:12px;">
+        <button type="button" class="btn btn-small" onclick="copyText('mcp-url', this)">URL kopieren</button>
+    </div>
+    <ol style="margin:0;padding-left:20px;line-height:1.7;">
+        <li>In Claude: <strong>Customize → Connectors → Add custom connector</strong></li>
+        <li>Name: <em>Schulplattform</em> · URL: die kopierte Adresse einfügen · Hinzufügen</li>
+        <li>In Cowork im Chat sagen: <em>„Zeig mir meine Klassen"</em> – fertig.</li>
+    </ol>
+    <p class="muted" style="margin:12px 0 0;font-size:0.88rem;">
+        Für <strong>Claude Code / Claude Desktop</strong> gibt es zusätzlich einen lokalen Connector:
+        <a href="https://github.com/nailik433/Schulplattform/blob/main/mcp/README.md" target="_blank" rel="noopener">Anleitung</a>.
+        Ohne Connector funktioniert in Cowork auch das
+        <a href="https://github.com/nailik433/Schulplattform/blob/main/docs/COWORK-BRIEFING.md" target="_blank" rel="noopener">Cowork-Briefing</a> (API).
+    </p>
 </div>
 
 <div class="card">
-    <h2 style="margin-top:0;">1. Lernumgebung von Claude bauen lassen</h2>
-    <p class="muted">Kopiere diesen Prompt in einen Claude-Chat und ersetze [BESCHREIBUNG].</p>
-    <textarea id="ki-prompt" readonly rows="16"
+    <h2 style="margin-top:0;">2. Prompt für einen normalen Claude-Chat</h2>
+    <p class="muted">Ohne Connector: Prompt kopieren, [BESCHREIBUNG] ersetzen, HTML-Ausgabe unter „+ Lernumgebung" einfügen.</p>
+    <textarea id="ki-prompt" readonly rows="14"
         style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:0.85rem;">Baue eine interaktive, animierte Lernumgebung als EINE vollständige, in sich geschlossene HTML-Datei.
 
 Vorgaben:
@@ -49,35 +62,27 @@ Thema / Beschreibung:
 </div>
 
 <div class="card">
-    <h2 style="margin-top:0;">2. In die Plattform bringen</h2>
-    <p>
-        <strong>Einfachster Weg:</strong> Claudes HTML-Ausgabe kopieren → in einer Klasse auf
-        <em>„+ Lernumgebung"</em> → HTML einfügen → Erstellen. Fertig.
-    </p>
-    <p class="muted">
-        Oder automatisch über die API (für Fortgeschrittene) – siehe unten.
-    </p>
-</div>
-
-<div class="card">
-    <h2 style="margin-top:0;">3. API (optional, automatisiert)</h2>
+    <h2 style="margin-top:0;">3. API-Schlüssel &amp; HTTP-API</h2>
     <p>Dein API-Schlüssel (geheim halten!):</p>
     <p><input id="api-key" type="text" readonly value="{{ api_key.key }}"
              style="font-family:ui-monospace,Menlo,Consolas,monospace;"></p>
     <div class="form-actions" style="margin-bottom:14px;">
         <button type="button" class="btn btn-secondary btn-small" onclick="copyText('api-key', this)">Schlüssel kopieren</button>
         <form class="inline-form" method="post"
-              onsubmit="return confirm('Neuen Schlüssel erzeugen? Der alte wird ungültig.');">
+              onsubmit="return confirm('Neuen Schlüssel erzeugen? Der alte wird ungültig – auch die Connector-URL in Cowork muss dann neu eingetragen werden.');">
             {% csrf_token %}
             <button type="submit" class="btn btn-danger btn-small">Neu erzeugen</button>
         </form>
     </div>
-    <p class="muted">Basis-URL: <code>{{ base_url }}</code></p>
+    <p class="muted">Basis-URL: <code>{{ base_url }}</code> · Header <code>X-API-Key</code> oder <code>Authorization: Bearer</code></p>
     <pre style="background:var(--surface-2);padding:14px;border-radius:12px;overflow:auto;font-size:0.82rem;">
 # Klassen (mit IDs) abrufen:
 curl -H "X-API-Key: {{ api_key.key }}" {{ base_url }}/api/classes
 
-# Lernumgebung anlegen:
+# Lernumgebungen einer Klasse auflisten:
+curl -H "X-API-Key: {{ api_key.key }}" "{{ base_url }}/api/lessons?class_id=1"
+
+# Lernumgebung anlegen (zum Aktualisieren zusätzlich "id": &lt;lesson-id&gt;):
 curl -X POST {{ base_url }}/api/lessons \
   -H "X-API-Key: {{ api_key.key }}" \
   -H "Content-Type: application/json" \

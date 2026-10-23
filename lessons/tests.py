@@ -186,3 +186,100 @@ class ApiKeyPageTests(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertTrue(teacher.api_keys.filter(is_active=True).exists())
         self.assertContains(r, "lesson_result")  # the prompt is present
+
+
+class ApiLessonListTests(TestCase):
+    def test_list_lessons_for_class(self):
+        teacher = make_teacher("list@example.com")
+        sc = make_class(teacher)
+        key = ApiKey.objects.create(teacher=teacher).key
+        Lesson.objects.create(school_class=sc, title="Erste", html=HTML)
+        r = self.client.get(f"/api/lessons?class_id={sc.id}", HTTP_X_API_KEY=key)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual([l["title"] for l in r.json()["lessons"]], ["Erste"])
+        self.assertIn("/lernumgebung/", r.json()["lessons"][0]["teacher_url"])
+        other = make_class(make_teacher("y@example.com"), name="6c")
+        self.assertEqual(self.client.get(f"/api/lessons?class_id={other.id}", HTTP_X_API_KEY=key).status_code, 400)
+
+
+class McpEndpointTests(TestCase):
+    def setUp(self):
+        self.teacher = make_teacher("mcp@example.com")
+        self.sc = make_class(self.teacher, name="R7a")
+        self.key = ApiKey.objects.create(teacher=self.teacher).key
+
+    def _rpc(self, method, params=None, msg_id=1, path="/mcp", bearer=True):
+        body = {"jsonrpc": "2.0", "method": method}
+        if msg_id is not None:
+            body["id"] = msg_id
+        if params is not None:
+            body["params"] = params
+        extra = {"HTTP_AUTHORIZATION": f"Bearer {self.key}"} if bearer else {}
+        return self.client.post(path, data=json.dumps(body), content_type="application/json", **extra)
+
+    def test_requires_key(self):
+        r = self._rpc("tools/list", bearer=False)
+        self.assertEqual(r.status_code, 401)
+        self.assertIn("Bearer", r["WWW-Authenticate"])
+
+    def test_initialize_negotiates_protocol(self):
+        r = self._rpc("initialize", {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "t", "version": "1"}})
+        data = r.json()
+        self.assertEqual(data["result"]["protocolVersion"], "2025-06-18")
+        self.assertEqual(data["result"]["serverInfo"]["name"], "schulplattform")
+        self.assertIn("tools", data["result"]["capabilities"])
+        # Unknown versions fall back to the latest we support.
+        r2 = self._rpc("initialize", {"protocolVersion": "1999-01-01"})
+        self.assertEqual(r2.json()["result"]["protocolVersion"], "2025-06-18")
+
+    def test_notification_is_acknowledged_without_body(self):
+        r = self._rpc("notifications/initialized", msg_id=None)
+        self.assertEqual(r.status_code, 202)
+
+    def test_tools_list(self):
+        names = [t["name"] for t in self._rpc("tools/list").json()["result"]["tools"]]
+        self.assertEqual(
+            names,
+            ["klassen_auflisten", "lernumgebungen_auflisten", "lernumgebung_anlegen", "lernumgebung_aktualisieren"],
+        )
+
+    def test_call_list_classes_and_create_lesson(self):
+        r = self._rpc("tools/call", {"name": "klassen_auflisten", "arguments": {}})
+        text = r.json()["result"]["content"][0]["text"]
+        self.assertIn(f"ID {self.sc.id}: R7a", text)
+
+        r = self._rpc("tools/call", {"name": "lernumgebung_anlegen",
+                                     "arguments": {"klasse_id": self.sc.id, "titel": "Bit-Labor", "html": HTML}})
+        result = r.json()["result"]
+        self.assertFalse(result.get("isError"))
+        lesson = Lesson.objects.get(title="Bit-Labor", school_class=self.sc)
+        self.assertIn(f"/lernumgebung/{lesson.pk}/", result["content"][0]["text"])
+
+        r = self._rpc("tools/call", {"name": "lernumgebungen_auflisten", "arguments": {"klasse_id": self.sc.id}})
+        self.assertIn("Bit-Labor", r.json()["result"]["content"][0]["text"])
+
+        r = self._rpc("tools/call", {"name": "lernumgebung_aktualisieren",
+                                     "arguments": {"lernumgebung_id": lesson.pk, "titel": "Bit-Labor v2", "html": HTML}})
+        lesson.refresh_from_db()
+        self.assertEqual(lesson.title, "Bit-Labor v2")
+
+    def test_foreign_class_is_a_tool_error_not_a_crash(self):
+        other = make_class(make_teacher("z@example.com"), name="5a")
+        r = self._rpc("tools/call", {"name": "lernumgebung_anlegen",
+                                     "arguments": {"klasse_id": other.id, "titel": "Nope", "html": HTML}})
+        self.assertTrue(r.json()["result"]["isError"])
+        self.assertFalse(Lesson.objects.filter(title="Nope").exists())
+
+    def test_key_in_path_for_clients_without_headers(self):
+        r = self._rpc("tools/list", path=f"/mcp/{self.key}/", bearer=False)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(self._rpc("tools/list", path="/mcp/sk_falsch/", bearer=False).status_code, 401)
+
+    def test_unknown_method_and_parse_error(self):
+        self.assertEqual(self._rpc("does/not/exist").json()["error"]["code"], -32601)
+        r = self.client.post("/mcp", data="nicht json", content_type="application/json",
+                             HTTP_AUTHORIZATION=f"Bearer {self.key}")
+        self.assertEqual(r.status_code, 400)
+
+    def test_get_is_not_supported(self):
+        self.assertEqual(self.client.get("/mcp", HTTP_AUTHORIZATION=f"Bearer {self.key}").status_code, 405)

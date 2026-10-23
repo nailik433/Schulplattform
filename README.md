@@ -46,9 +46,14 @@ HTTPS), z. B. bei Hetzner. Live-Instanz: `https://hebid.de`.
 - Jede Lehrkraft hat einen **API-Schlüssel** (Dashboard → „KI & API").
 - `GET /api/classes` · `POST /api/lessons` – Claude baut die Lernumgebung
   und legt sie **direkt in der richtigen Klasse** ab.
-- [`docs/COWORK-BRIEFING.md`](docs/COWORK-BRIEFING.md): Projekt-Anweisung
-  für Cowork (API-Weg). [`mcp/`](mcp/README.md): lokaler **MCP-Connector**
-  für Claude Code / Claude Desktop mit fertigen Werkzeugen.
+- **Eingebauter MCP-Server** (`/mcp`): als *Custom Connector* in Cowork /
+  claude.ai hinzufügen – fertige Werkzeuge ohne Installation
+  ([`mcp/README.md`](mcp/README.md)). Zusätzlich ein lokaler Connector für
+  Claude Code / Desktop und das [`docs/COWORK-BRIEFING.md`](docs/COWORK-BRIEFING.md)
+  für den reinen API-Weg.
+- **Lernfortschritt pro Klasse**: Matrix Schüler × Lernumgebungen/Abgaben,
+  CSV-Export für Excel.
+- **Dark Mode** folgt der Systemeinstellung.
 
 **Betrieb & Datenschutz**
 - Docker Compose (Gunicorn + PostgreSQL + Caddy mit Let's-Encrypt-HTTPS),

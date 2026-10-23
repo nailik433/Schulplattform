@@ -20,12 +20,12 @@ Simulationen, Aufgaben). Schüler/innen öffnen sie und bekommen sofort Feedback
 Du (Claude) kannst solche Lernumgebungen **über eine HTTP-API** anlegen. Nutze
 dafür das Terminal (curl) oder HTTP-Requests.
 
-> **Hinweis zu Cowork:** In Cowork läuft das Ablegen über die hier
-> beschriebene API (curl/HTTP). Der fertige MCP-Connector aus
-> [`mcp/README.md`](../mcp/README.md) ist ein *lokaler* Server und funktioniert
-> nur in **Claude Code / Claude Desktop**, nicht in Cowork. (Ein Remote-MCP-
-> Endpunkt direkt in der Plattform wäre die Cowork-taugliche Variante – bei
-> Bedarf baubar.)
+> **Noch bequemer in Cowork:** Die Plattform hat einen eingebauten
+> Connector. Einmal unter **Customize → Connectors → Add custom** die
+> Connector-URL von der Seite „KI & API“ eintragen – dann hast du die
+> Werkzeuge `klassen_auflisten`, `lernumgebungen_auflisten`,
+> `lernumgebung_anlegen` und `lernumgebung_aktualisieren` direkt im Chat und
+> brauchst kein curl. Die HTML-Anforderungen unten gelten weiterhin.
 
 ### Zugang (einmal eintragen)
 - Basis-URL: `https://hebid.de`

@@ -29,11 +29,11 @@ mir automatisch die Lernumgebung?"* – Hier die ehrliche, einfache Antwort:
 | | Cowork | Claude Code |
 |---|---|---|
 | Wofür | Dein Alltag: Planung, Arbeitsblätter, Folien, Stoffverteilung, Lernumgebungen bauen | Nur wenn am *Quellcode der Plattform* etwas geändert wird |
-| Ablegen in der Plattform | über das **Briefing / die API** (funktioniert sicher) | über den **MCP-Connector** (bequemer, aber Einrichtung nötig) |
+| Ablegen in der Plattform | über den **eingebauten Connector** (Punkt 4) oder das Briefing/die API | über den **lokalen MCP-Connector** oder ebenfalls den eingebauten |
 | Empfehlung für dich | **Hier bleibst du.** | Nur bei Bedarf |
 
-➡️ **Kurz: Du musst NICHT nach Claude Code umziehen.** Plane weiter in Cowork.
-Der MCP-Connector ist „Kür", kein Muss – siehe Punkt 4.
+➡️ **Kurz: Du musst NICHT nach Claude Code umziehen.** Plane weiter in Cowork –
+mit dem eingebauten Connector (Punkt 4) hat Claude dort alle Werkzeuge.
 
 ---
 
@@ -107,40 +107,21 @@ die Anleitung steht in [`docs/AUTO-DEPLOY.md`](./AUTO-DEPLOY.md).
 
 ---
 
-## 4. ☕ Kür: MCP-Connector einrichten (nur für Claude Code / Claude Desktop)
+## 4. ☕ Cowork-Connector hinzufügen (2 Minuten, keine Installation)
 
-**Geklärt (deine Cowork-Frage):** Der Connector, den ich gebaut habe, ist ein
-**lokaler** MCP-Server. Laut Anthropic-Support laufen lokale MCP-Server **nur in
-Claude Code und Claude Desktop – NICHT in Cowork**. Cowork kann nur
-**Remote**-Connector (eine öffentliche URL). Für Cowork heißt das:
+**Geklärt und gebaut:** Cowork kann nur *Remote*-Connector – deshalb steckt der
+MCP-Server jetzt **direkt in der Plattform**. Du fügst ihn einmal in Claude
+hinzu, danach hat Claude in Cowork fertige Werkzeuge („Klassen auflisten“,
+„Lernumgebung anlegen“, „… aktualisieren“) und schreibt direkt in die Klasse.
 
-- **Jetzt sofort:** In Cowork nutzt du das **Briefing/die API** (Punkt 5) – das
-  funktioniert dort zuverlässig, ohne Connector.
-- **Später, am elegantesten:** Ich kann einen **Remote-MCP-Endpunkt direkt in
-  die Plattform** einbauen (`https://hebid.de/mcp`). Den fügst du dann in Cowork
-  unter **Customize → Connectors → Add custom** als URL hinzu und hast die
-  Werkzeuge nativ in Cowork. → Sag Bescheid, wenn ich das bauen soll (eigenes
-  Feature, eigener Code-Chat).
+- [ ] In der Plattform: Dashboard → **„KI & API“** → **Connector-URL kopieren**
+      (`https://hebid.de/mcp/<schlüssel>/` – wie ein Passwort behandeln).
+- [ ] In Claude: **Customize → Connectors → Add custom connector** → Name
+      „Schulplattform“, URL einfügen → Hinzufügen.
+- [ ] In Cowork testen: „Zeig mir meine Klassen.“
 
-**Der lokale Connector unten lohnt sich also nur, wenn du in Claude Code
-arbeitest. Voraussetzung:** Claude Code ist auf deinem Mac installiert.
-
-- [ ] In der Plattform: Dashboard → **„KI-Prompt & API"** → API-Schlüssel
-      kopieren (beginnt mit `sk_…`).
-- [ ] Im Terminal einmalig:
-      ```bash
-      python3 -m pip install mcp
-      ```
-- [ ] Connector registrieren (Pfad + Schlüssel anpassen):
-      ```bash
-      claude mcp add schulplattform \
-        -e SCHULPLATTFORM_URL=https://hebid.de \
-        -e SCHULPLATTFORM_API_KEY=sk_DEIN_SCHLUESSEL \
-        -- python3 /voller/pfad/zu/Schulplattform/mcp/schulplattform_mcp.py
-      ```
-- [ ] Testen: `claude mcp list` und im Chat „Zeig mir meine Klassen."
-
-> Die ausführliche Anleitung steht in [`mcp/README.md`](../mcp/README.md).
+> Für **Claude Code / Claude Desktop** gibt es zusätzlich den lokalen Connector
+> (Anleitung in [`mcp/README.md`](../mcp/README.md), Variante B) – optional.
 
 ---
 

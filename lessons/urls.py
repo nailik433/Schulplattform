@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import api, views
+from . import api, mcp, views
 
 app_name = "lessons"
 
@@ -19,4 +19,9 @@ urlpatterns = [
     # API (KI-Schnittstelle)
     path("api/classes", api.api_classes, name="api_classes"),
     path("api/lessons", api.api_lessons, name="api_lessons"),
+    # Remote MCP server (Cowork / claude.ai custom connector)
+    path("mcp", mcp.mcp_endpoint, name="mcp"),
+    path("mcp/", mcp.mcp_endpoint),
+    path("mcp/<str:key>/", mcp.mcp_endpoint, name="mcp_keyed"),
+    path("mcp/<str:key>", mcp.mcp_endpoint),
 ]
