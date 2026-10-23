@@ -30,11 +30,71 @@
 
     <form method="post" enctype="multipart/form-data" novalidate>
         {% csrf_token %}
-        {{ form.as_p }}
+        {% for field in form %}
+            {% if field.name == "files" %}
+                <p>
+                    <label>{{ field.label }}</label>
+                    <span id="dropzone" class="dropzone">
+                        <span class="dz-hint">📎 Dateien hierher ziehen …<br>
+                            <span class="muted">oder unten auswählen</span></span>
+                        {{ field }}
+                        <ul id="dz-list" class="dz-list"></ul>
+                    </span>
+                    {% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}
+                    {{ field.errors }}
+                </p>
+            {% else %}
+                <p>
+                    {{ field.label_tag }}
+                    {{ field }}
+                    {% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}
+                    {{ field.errors }}
+                </p>
+            {% endif %}
+        {% endfor %}
         <div class="form-actions">
             <button type="submit" class="btn">{% if assignment %}Speichern{% else %}Austeilen{% endif %}</button>
             <a class="btn btn-secondary" href="{% url 'schools:class_detail' school_class.pk %}">Abbrechen</a>
         </div>
     </form>
 </div>
+
+<script>
+(function(){
+    var dz = document.getElementById('dropzone');
+    var input = document.getElementById('{{ form.files.id_for_label }}');
+    var list = document.getElementById('dz-list');
+    if(!dz || !input) return;
+
+    function render(){
+        list.innerHTML = '';
+        Array.prototype.forEach.call(input.files, function(f){
+            var li = document.createElement('li');
+            li.textContent = '📄 ' + f.name;
+            list.appendChild(li);
+        });
+    }
+    function addFiles(fileList){
+        if(!window.DataTransfer){ return; }  // fallback: native input still works
+        var dt = new DataTransfer();
+        Array.prototype.forEach.call(input.files, function(f){ dt.items.add(f); });
+        Array.prototype.forEach.call(fileList, function(f){ dt.items.add(f); });
+        input.files = dt.files;
+        render();
+    }
+    input.addEventListener('change', render);
+    ['dragenter','dragover'].forEach(function(ev){
+        dz.addEventListener(ev, function(e){ e.preventDefault(); dz.classList.add('drag'); });
+    });
+    dz.addEventListener('dragleave', function(e){
+        if(e.target === dz){ dz.classList.remove('drag'); }
+    });
+    dz.addEventListener('drop', function(e){
+        e.preventDefault(); dz.classList.remove('drag');
+        if(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length){
+            addFiles(e.dataTransfer.files);
+        }
+    });
+})();
+</script>
 {% endblock %}

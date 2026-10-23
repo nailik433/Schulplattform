@@ -160,6 +160,22 @@ input:focus, textarea:focus, select:focus {
 .errorlist { color: var(--error-ink); list-style: none; padding: 0; margin: 6px 0; font-size: 0.88rem; }
 .form-actions { margin-top: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
+/* Drag & drop upload zone */
+.dropzone {
+    display: block;
+    border: 2px dashed var(--border);
+    border-radius: var(--radius-sm);
+    padding: 18px;
+    text-align: center;
+    background: var(--surface-2);
+    transition: border-color .15s ease, background-color .15s ease;
+}
+.dropzone.drag { border-color: var(--primary); background: #eef4ff; }
+.dropzone .dz-hint { display: block; color: var(--muted); font-size: 0.95rem; margin-bottom: 12px; }
+.dropzone input[type=file] { width: 100%; }
+.dz-list { list-style: none; padding: 0; margin: 12px 0 0; text-align: left; }
+.dz-list li { padding: 5px 0; font-size: 0.92rem; }
+
 /* Big single-field code input for the student login */
 .code-input {
     text-align: center;
@@ -203,8 +219,7 @@ table.data tr:last-child td { border-bottom: none; }
     padding: 12px 22px; border-radius: 14px;
 }
 
-.muted { color: var(--muted); }
-.badge {
+.muted { color: var(--muted); }.badge {
     font-size: 0.74rem; padding: 3px 9px; border-radius: 999px;
     background: var(--surface-2); color: var(--muted); border: 1px solid var(--border-soft);
     white-space: nowrap;
