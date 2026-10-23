@@ -20,6 +20,12 @@ Simulationen, Aufgaben). Schüler/innen öffnen sie und bekommen sofort Feedback
 Du (Claude) kannst solche Lernumgebungen **über eine HTTP-API** anlegen. Nutze
 dafür das Terminal (curl) oder HTTP-Requests.
 
+> **Noch bequemer:** Wenn der MCP-Connector eingerichtet ist (siehe
+> [`mcp/README.md`](../mcp/README.md)), hast du fertige Werkzeuge
+> (`klassen_auflisten`, `lernumgebung_anlegen`, `lernumgebung_aktualisieren`,
+> `lernumgebung_aus_datei`) und brauchst kein curl. Es gelten weiter die
+> HTML-Anforderungen unten, nur das Ablegen läuft über diese Werkzeuge.
+
 ### Zugang (einmal eintragen)
 - Basis-URL: `https://hebid.de`
 - API-Schlüssel (geheim halten): `[HIER MEINEN API-SCHLÜSSEL EINTRAGEN]`
