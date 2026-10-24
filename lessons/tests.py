@@ -295,7 +295,7 @@ from django.conf import settings  # noqa: E402
 from django.test import Client  # noqa: E402
 
 from .models import LessonState  # noqa: E402
-from .protocol import LESSON_PROTOCOL  # noqa: E402
+from .protocol import LESSON_PROTOCOL, check_protocol  # noqa: E402
 from .views import STATE_MAX_BYTES  # noqa: E402
 
 
@@ -634,3 +634,262 @@ class TemplateHygieneTests(TestCase):
         html = self.client.get(reverse("lessons:lesson_play", args=[lesson.pk])).content.decode()
         for leak in ("{#", "#}", "{%", "%}", "{{", "}}"):
             self.assertNotIn(leak, html, leak)
+
+
+# --------------------------------------------------------------------------
+# Progress, details and the mandatory protocol
+# --------------------------------------------------------------------------
+
+COMPLETE_HTML = (
+    "<!DOCTYPE html><html><body><script>"
+    "parent.postMessage({type:'lesson_state_request'},'*');"
+    "parent.postMessage({type:'lesson_state_save', state:{a:1}, progress:40},'*');"
+    "parent.postMessage({type:'lesson_result', score:1, max:2, completed:true, detail:{'A1':'ok'}},'*');"
+    "</script></body></html>"
+)
+
+
+class ProgressTests(StateTestBase):
+    def save_with(self, progress, client=None, state=None):
+        body = {"state": state if state is not None else {"n": 1}, "progress": progress}
+        return (client or self.client).post(
+            self.save_url, data=json.dumps(body), content_type="application/json"
+        )
+
+    def test_progress_is_stored_with_the_state(self):
+        self.login_as(self.anna)
+        self.assertEqual(self.save_with(40).status_code, 200)
+        self.assertEqual(LessonState.objects.get().progress, 40)
+
+    def test_progress_is_rounded_and_garbage_is_ignored(self):
+        self.login_as(self.anna)
+        self.save_with(33.6)
+        self.assertEqual(LessonState.objects.get().progress, 34)
+        for bad in ("viel", True, None, [50], {"p": 1}, float("inf")):
+            self.assertIn(self.save_with(bad).status_code, (200, 400))
+        self.assertEqual(LessonState.objects.get().progress, 34)  # unchanged, no crash
+        self.save_with(140)   # out of range is clamped, not trusted
+        self.assertEqual(LessonState.objects.get().progress, 100)
+        self.save_with(-5)
+        self.assertEqual(LessonState.objects.get().progress, 0)
+
+    def test_a_save_without_progress_keeps_the_last_value(self):
+        self.login_as(self.anna)
+        self.save_with(60)
+        self.save({"n": 2})
+        row = LessonState.objects.get()
+        self.assertEqual((row.progress, row.state), (60, {"n": 2}))
+
+    def test_teacher_sees_a_progress_bar_per_pupil(self):
+        self.login_as(self.anna)
+        self.save_with(40)
+        self.client.logout()
+        self.client.force_login(self.teacher)
+        page = self.client.get(self.lesson.get_absolute_url())
+        rows = {r["student"].pk: r["progress"] for r in page.context["roster"]}
+        self.assertEqual(rows[self.anna.pk], 40)
+        self.assertIsNone(rows[self.ben.pk])
+        self.assertContains(page, "40 %")
+
+    def test_a_finished_pupil_counts_as_100(self):
+        self.login_as(self.anna)
+        self.save_with(40)
+        self.client.post(
+            reverse("lessons:lesson_report", args=[self.lesson.pk]),
+            data=json.dumps({"score": 1, "max": 1, "completed": True}), content_type="application/json",
+        )
+        self.client.logout()
+        self.client.force_login(self.teacher)
+        rows = {r["student"].pk: r["progress"] for r in self.client.get(self.lesson.get_absolute_url()).context["roster"]}
+        self.assertEqual(rows[self.anna.pk], 100)
+
+    def test_class_matrix_shows_the_percentage_and_the_csv_too(self):
+        self.login_as(self.anna)
+        self.save_with(40)
+        self.client.logout()
+        self.client.force_login(self.teacher)
+        url = reverse("schools:class_progress", args=[self.sc.pk])
+        self.assertContains(self.client.get(url), "40 %")
+        self.assertIn("40 %", self.client.get(url, {"format": "csv"}).content.decode("utf-8-sig"))
+
+    def test_class_matrix_without_progress_still_says_started(self):
+        self.login_as(self.anna)
+        self.save({"n": 1})
+        self.client.logout()
+        self.client.force_login(self.teacher)
+        self.assertContains(self.client.get(reverse("schools:class_progress", args=[self.sc.pk])), "geöffnet")
+
+    def test_player_page_forwards_progress(self):
+        self.login_as(self.anna)
+        html = self.client.get(self.play_url).content.decode()
+        self.assertIn("progress: progress", html)
+        self.assertIn("d.progress", html)
+
+    def test_reset_clears_progress_too(self):
+        self.login_as(self.anna)
+        self.save_with(70)
+        self.client.logout()
+        self.client.force_login(self.teacher)
+        self.client.post(reverse("lessons:state_reset", args=[self.lesson.pk, self.anna.pk]))
+        self.assertFalse(LessonState.objects.exists())
+
+
+class ResultDetailTests(StateTestBase):
+    def setUp(self):
+        super().setUp()
+        self.login_as(self.anna)
+        self.client.post(
+            reverse("lessons:lesson_report", args=[self.lesson.pk]),
+            data=json.dumps({
+                "score": 3, "max": 4, "extra": 1, "completed": True,
+                "detail": {"Aufgabe 1": "richtig", "Aufgabe 2": "falsch <b>7</b>", "Zeit (s)": 312,
+                           "Liste": [1, 2]},
+            }),
+            content_type="application/json",
+        )
+        self.save({"count": 3})
+        self.client.logout()
+        self.url = reverse("lessons:result_detail", args=[self.lesson.pk, self.anna.pk])
+
+    def test_teacher_sees_the_individual_results(self):
+        self.client.force_login(self.teacher)
+        r = self.client.get(self.url)
+        self.assertEqual(r.status_code, 200)
+        for text in ("Aufgabe 1", "richtig", "312", "Zusatzpunkte", "3", "&quot;count&quot;: 3"):
+            self.assertContains(r, text)
+
+    def test_reported_text_is_escaped(self):
+        self.client.force_login(self.teacher)
+        r = self.client.get(self.url)
+        self.assertNotContains(r, "<b>7</b>")
+        self.assertContains(r, "&lt;b&gt;7&lt;/b&gt;")
+
+    def test_pupil_without_anything_reported_shows_a_hint(self):
+        self.client.force_login(self.teacher)
+        r = self.client.get(reverse("lessons:result_detail", args=[self.lesson.pk, self.ben.pk]))
+        self.assertContains(r, "keine Einzelergebnisse")
+
+    def test_detail_page_is_linked_from_the_lesson_page(self):
+        self.client.force_login(self.teacher)
+        self.assertContains(self.client.get(self.lesson.get_absolute_url()), self.url)
+
+    def test_anonymous_pupils_and_foreign_teachers_get_no_access(self):
+        self.assertEqual(self.client.get(self.url).status_code, 302)  # login redirect
+        self.login_as(self.anna)
+        self.assertNotEqual(self.client.get(self.url).status_code, 200)
+        self.client.logout()
+        other = make_teacher("fremd@example.com")
+        make_class(other, name="9c")
+        self.client.force_login(other)
+        self.assertEqual(self.client.get(self.url).status_code, 404)
+
+    def test_pupil_from_another_class_is_404(self):
+        other_class = make_class(self.teacher, name="8a")
+        stranger = Student.objects.create(school_class=other_class)
+        self.client.force_login(self.teacher)
+        r = self.client.get(reverse("lessons:result_detail", args=[self.lesson.pk, stranger.pk]))
+        self.assertEqual(r.status_code, 404)
+
+    def test_huge_detail_is_cut_off(self):
+        LessonResult.objects.filter(student=self.anna).update(detail={f"k{i}": i for i in range(500)})
+        self.client.force_login(self.teacher)
+        r = self.client.get(self.url)
+        self.assertEqual(len(r.context["detail_rows"]), 200)
+        self.assertTrue(r.context["detail_truncated"])
+
+
+class ProtocolCheckTests(TestCase):
+    def test_complete_lesson_has_no_hints(self):
+        self.assertEqual(check_protocol(COMPLETE_HTML), [])
+
+    def test_static_page_gets_every_hint(self):
+        hints = check_protocol(HTML)
+        self.assertEqual(len(hints), 3)
+        joined = " ".join(hints)
+        for word in ("lesson_result", "lesson_state_request", "lesson_state_save"):
+            self.assertIn(word, joined)
+
+    def test_missing_progress_is_noticed_even_if_a_css_class_has_that_name(self):
+        html = COMPLETE_HTML.replace(", progress:40", "").replace("</script>", "</script><style>.progress{}</style>")
+        hints = check_protocol(html)
+        self.assertEqual(len(hints), 1)
+        self.assertIn("progress", hints[0])
+
+    def test_missing_detail_is_noticed(self):
+        hints = check_protocol(COMPLETE_HTML.replace(", detail:{'A1':'ok'}", ""))
+        self.assertEqual(len(hints), 1)
+        self.assertIn("detail", hints[0])
+
+    def test_browser_storage_is_flagged(self):
+        for api in ("localStorage", "sessionStorage", "indexedDB"):
+            hints = check_protocol(COMPLETE_HTML + f"<script>{api}.x</script>")
+            self.assertEqual(len(hints), 1, api)
+
+    def test_empty_html_does_not_crash(self):
+        self.assertEqual(len(check_protocol(None)), 3)
+
+
+class MandatoryProtocolForOtherChatsTests(TestCase):
+    """What a foreign chat sees through the connector must make clear that the
+    interface is mandatory, and the tool answers must call out what is missing."""
+
+    def setUp(self):
+        self.teacher = make_teacher("pflicht@example.com")
+        self.sc = make_class(self.teacher)
+        self.key = ApiKey.objects.create(teacher=self.teacher).key
+
+    def rpc(self, method, params=None):
+        body = {"jsonrpc": "2.0", "id": 1, "method": method, "params": params or {}}
+        return self.client.post("/mcp", data=json.dumps(body), content_type="application/json",
+                                HTTP_AUTHORIZATION=f"Bearer {self.key}").json()["result"]
+
+    def create(self, html):
+        return self.rpc("tools/call", {"name": "lernumgebung_anlegen",
+                                       "arguments": {"klasse_id": self.sc.id, "titel": "T", "html": html}})
+
+    def test_instructions_say_it_is_mandatory_and_name_progress_and_detail(self):
+        text = self.rpc("initialize")["instructions"]
+        for word in ("PFLICHT", "progress", "detail", "Hinweise"):
+            self.assertIn(word, text, word)
+
+    def test_tool_descriptions_start_with_the_obligation(self):
+        tools = {t["name"]: t["description"] for t in self.rpc("tools/list")["tools"]}
+        for name in ("lernumgebung_anlegen", "lernumgebung_aktualisieren"):
+            self.assertTrue(tools[name].startswith("PFLICHT"), name)
+
+    def test_creating_a_static_page_returns_warnings(self):
+        text = self.create(HTML)["content"][0]["text"]
+        self.assertIn("HINWEISE", text)
+        self.assertIn("lesson_state_save", text)
+        self.assertTrue(Lesson.objects.filter(title="T").exists())  # warned, not rejected
+
+    def test_creating_a_complete_page_returns_the_all_clear(self):
+        text = self.create(COMPLETE_HTML)["content"][0]["text"]
+        self.assertNotIn("HINWEISE", text)
+        self.assertIn("✓", text)
+
+    def test_update_also_warns(self):
+        lesson = Lesson.objects.create(school_class=self.sc, title="T", html=COMPLETE_HTML)
+        result = self.rpc("tools/call", {"name": "lernumgebung_aktualisieren",
+                                         "arguments": {"lernumgebung_id": lesson.pk, "titel": "T", "html": HTML}})
+        self.assertIn("HINWEISE", result["content"][0]["text"])
+
+    def test_rest_api_returns_hints_as_well(self):
+        r = self.client.post("/api/lessons", data=json.dumps({"class_id": self.sc.id, "title": "R", "html": HTML}),
+                             content_type="application/json", HTTP_X_API_KEY=self.key)
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(len(r.json()["hinweise"]), 3)
+
+    def test_example_lesson_in_docs_passes_its_own_check(self):
+        example = pathlib.Path(settings.BASE_DIR, "docs", "beispiel-zwischenstand.html").read_text()
+        self.assertEqual(check_protocol(example), [])
+
+    def test_local_mcp_server_passes_hints_on(self):
+        source = pathlib.Path(settings.BASE_DIR, "mcp", "schulplattform_mcp.py").read_text()
+        self.assertIn("hinweise", source)
+        self.assertIn("HINWEISE", source)
+
+    def test_briefing_calls_the_interface_mandatory(self):
+        briefing = pathlib.Path(settings.BASE_DIR, "docs", "COWORK-BRIEFING.md").read_text()
+        for word in ("Pflicht", "progress", "detail", "Hinweise"):
+            self.assertIn(word, briefing, word)

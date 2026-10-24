@@ -104,6 +104,9 @@ class LessonState(models.Model):
         "schools.Student", on_delete=models.CASCADE, related_name="lesson_states"
     )
     state = models.JSONField(default=dict)
+    # How far the pupil is (0-100), reported by the lesson with each save so the
+    # teacher can see progress without having to understand the lesson's state.
+    progress = models.PositiveSmallIntegerField(null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

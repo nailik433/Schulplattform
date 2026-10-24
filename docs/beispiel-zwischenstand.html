@@ -45,7 +45,8 @@ const PlatformState = {
     parent.postMessage({type: 'lesson_state_request'}, '*');
     setTimeout(() => finish(null), 1500);
   },
-  save(state) { parent.postMessage({type: 'lesson_state_save', state}, '*'); }
+  save(state, progress) { parent.postMessage({type: 'lesson_state_save', state, progress}, '*'); },
+  result(r) { parent.postMessage(Object.assign({type: 'lesson_result'}, r), '*'); }
 };
 
 // ---- Die Lernumgebung selbst ----
@@ -56,7 +57,7 @@ const snapshot = () => ({count, note: $('note').value});
 let savedTimer = null;
 const changed = () => {
   $('status').textContent = 'Änderung wird gespeichert …';
-  PlatformState.save(snapshot());
+  PlatformState.save(snapshot(), Math.min(100, count * 20));  // 5x klicken = 100 %
   // Die Rückmeldung ist optional. In der Lehrer-Vorschau wird nichts gespeichert und es kommt keine.
   clearTimeout(savedTimer);
   savedTimer = setTimeout(() => { $('status').textContent = 'Hier wird nichts gespeichert (Vorschau)'; }, 4000);
@@ -77,7 +78,10 @@ PlatformState.load(state => {
 $('plus').onclick = () => { count++; render(); changed(); };
 $('note').oninput = changed;
 $('done').onclick = () =>
-  parent.postMessage({type: 'lesson_result', score: 5, max: 5, extra: 2, extra_max: 3, completed: true}, '*');
+  PlatformState.result({
+    score: 5, max: 5, extra: 2, extra_max: 3, completed: true,
+    detail: {'Zähler': count, 'Notiz': $('note').value.slice(0, 200) || '(leer)'}
+  });
 </script>
 </body>
 </html>

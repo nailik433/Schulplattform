@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}{{ student.school_class.name }}-{{ student.number_padded }} · {{ lesson.title }}{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{{ lesson.get_absolute_url }}">← {{ lesson.title }}</a>
+
+<div class="page-head">
+    <div>
+        <h1>{{ lesson.school_class.name }}-{{ student.number_padded }}</h1>
+        <p class="subtitle">{{ lesson.title }}</p>
+    </div>
+</div>
+
+<div class="card">
+    <table class="data">
+        <tbody>
+            <tr>
+                <th>Status</th>
+                <td>
+                    {% if result and result.completed %}
+                        <span class="chip chip-ok">✓ fertig · {{ result.updated_at|date:"d.m.Y H:i" }}</span>
+                    {% elif result %}
+                        <span class="chip chip-info">geöffnet · {{ result.updated_at|date:"d.m.Y H:i" }}</span>
+                    {% elif state %}
+                        <span class="chip chip-info">begonnen</span>
+                    {% else %}
+                        <span class="chip">offen</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <th>Fortschritt</th>
+                <td>
+                    {% if progress is not None %}
+                        <span class="bar{% if progress < 50 %} low{% endif %}"><span style="width:{{ progress }}%;"></span></span>{{ progress }} %
+                    {% else %}
+                        <span class="muted">Die Lernumgebung meldet keinen Fortschritt.</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <th>Punkte</th>
+                <td>
+                    {% if result and result.max_score %}
+                        <strong>{{ result.score|floatformat:"-2" }}</strong> / {{ result.max_score|floatformat:"-2" }}
+                        {% if result.percent is not None %}<span class="muted">({{ result.percent }} %)</span>{% endif %}
+                    {% else %}
+                        <span class="muted">—</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% if result and result.extra is not None %}
+            <tr>
+                <th>Zusatzpunkte</th>
+                <td>+{{ result.extra|floatformat:"-2" }}{% if result.extra_max %} / {{ result.extra_max|floatformat:"-2" }}{% endif %}</td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<div class="section-head"><h2>Einzelergebnisse</h2></div>
+<div class="card" style="padding:0;overflow-x:auto;">
+    {% if detail_rows %}
+        <table class="data">
+            <thead><tr><th>Aufgabe</th><th>Ergebnis</th></tr></thead>
+            <tbody>
+                {% for key, value in detail_rows %}
+                    <tr><td>{{ key }}</td><td style="white-space:pre-wrap;">{{ value }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% if detail_truncated %}<p class="muted" style="padding:0 16px;">Es werden nur die ersten {{ detail_rows|length }} Einträge angezeigt.</p>{% endif %}
+    {% else %}
+        <p class="muted" style="padding:12px 16px;margin:0;">Die Lernumgebung hat keine Einzelergebnisse (<code>detail</code>) gemeldet.</p>
+    {% endif %}
+</div>
+
+{% if state_json %}
+<details class="card" style="margin-top:16px;">
+    <summary>Gespeicherter Zwischenstand (technisch)</summary>
+    <pre style="white-space:pre-wrap;word-break:break-word;max-height:360px;overflow:auto;">{{ state_json }}</pre>
+</details>
+{% endif %}
+{% endblock %}

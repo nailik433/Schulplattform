@@ -228,7 +228,7 @@ def class_progress(request, pk):
     """Learning-progress matrix for a class: one row per active pupil, one
     column per lesson and per assignment that collects submissions. Also
     available as CSV (``?format=csv``) for Excel / grading."""
-    from lessons.models import LessonResult
+    from lessons.models import LessonResult, LessonState
     from worksheets.models import Submission
 
     school_class = _get_teacher_class(request.user, pk)
@@ -240,6 +240,12 @@ def class_progress(request, pk):
     results = {
         (r.lesson_id, r.student_id): r
         for r in LessonResult.objects.filter(lesson__in=lessons)
+    }
+    saved = {
+        (st.lesson_id, st.student_id): st
+        for st in LessonState.objects.filter(lesson__in=lessons).only(
+            "lesson_id", "student_id", "progress"
+        )
     }
     submissions = {
         (sub.assignment_id, sub.student_id): sub
@@ -263,8 +269,12 @@ def class_progress(request, pk):
                     cell = {"state": "done", "text": text, "percent": result.percent}
                     done += 1
                     col["done"] += 1
-                elif result:
-                    cell = {"state": "started", "text": "geöffnet"}
+                elif result or (col["obj"].id, student.id) in saved:
+                    state = saved.get((col["obj"].id, student.id))
+                    if state is not None and state.progress is not None:
+                        cell = {"state": "started", "text": f"{state.progress} %"}
+                    else:
+                        cell = {"state": "started", "text": "geöffnet"}
                 else:
                     cell = {"state": "open", "text": "–"}
             else:

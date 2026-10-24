@@ -65,8 +65,10 @@ TOOLS = [
     {
         "name": "lernumgebung_anlegen",
         "title": "Lernumgebung anlegen",
-        "description": "Legt eine neue interaktive Lernumgebung in einer Klasse an. "
-        "Gibt ID und Lehrer-URL zum Testen zurück; Schüler/innen sehen sie nach dem Login.",
+        "description": "PFLICHT: Die HTML muss Ergebnis (lesson_result), Zwischenstand (lesson_state_request/_save "
+        "mit progress) und Einzelergebnisse (detail) an die Plattform melden – Details stehen in den "
+        "Server-Anweisungen. Legt eine neue interaktive Lernumgebung in einer Klasse an und meldet "
+        "fehlende Teile als Hinweise zurück; diese beheben und erneut senden. Gibt ID und Lehrer-URL zurück.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -81,8 +83,9 @@ TOOLS = [
     {
         "name": "lernumgebung_aktualisieren",
         "title": "Lernumgebung aktualisieren",
-        "description": "Ersetzt Titel und HTML einer bestehenden Lernumgebung (gleiche URL, "
-        "Ergebnisse bleiben erhalten).",
+        "description": "PFLICHT: Auch die neue HTML muss lesson_result (mit detail) und lesson_state_* (mit "
+        "progress) an die Plattform melden. Ersetzt Titel und HTML einer bestehenden Lernumgebung (gleiche "
+        "URL, Ergebnisse bleiben erhalten); Hinweise der Plattform beheben und erneut senden.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -113,6 +116,21 @@ def _int_arg(args, name):
         raise ToolError(f"Parameter „{name}“ fehlt oder ist keine Zahl.")
 
 
+def _hints_text(data):
+    """Tell the assistant what the lesson's HTML still has to report to the
+    platform; empty when everything is in place."""
+    hints = data.get("hinweise") or []
+    if not hints:
+        return "\n\n✓ Die Lernumgebung meldet Ergebnis, Zwischenstand und Fortschritt an die Plattform."
+    lines = "\n".join(f"- {hint}" for hint in hints)
+    return (
+        "\n\n⚠ HINWEISE – bitte beheben. Die Lehrkraft sieht sonst nur „geöffnet“ bzw. Schüler/innen "
+        "verlieren ihren Stand:\n" + lines +
+        "\nErgänze das in der HTML und sende sie mit lernumgebung_aktualisieren erneut, "
+        "bis keine Hinweise mehr kommen."
+    )
+
+
 def _call_tool(teacher, name, args, base):
     try:
         if name == "klassen_auflisten":
@@ -137,7 +155,7 @@ def _call_tool(teacher, name, args, base):
             ]
             return "Lernumgebungen:\n" + "\n".join(lines)
 
-        if name == "lernumgebung_anlegen":
+        if name == "lernumgebung_anlegen":  # noqa: SIM102
             data, _ = upsert_lesson(
                 teacher,
                 title=args.get("titel"),
@@ -149,6 +167,7 @@ def _call_tool(teacher, name, args, base):
                 f"Lernumgebung angelegt (ID {data['id']}) in Klasse {data['class_name']}.\n"
                 f"Zum Ansehen/Testen: {data['teacher_url']}\n"
                 "Schüler/innen finden sie nach dem Login unter „Meine Aufgaben“."
+                + _hints_text(data)
             )
 
         if name == "lernumgebung_aktualisieren":
@@ -159,7 +178,10 @@ def _call_tool(teacher, name, args, base):
                 lesson_id=_int_arg(args, "lernumgebung_id"),
                 base=base,
             )
-            return f"Lernumgebung {data['id']} aktualisiert.\nZum Ansehen/Testen: {data['teacher_url']}"
+            return (
+                f"Lernumgebung {data['id']} aktualisiert.\nZum Ansehen/Testen: {data['teacher_url']}"
+                + _hints_text(data)
+            )
     except ApiError as exc:
         raise ToolError(exc.message)
     raise ToolError(f"Unbekanntes Werkzeug: {name}")

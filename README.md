@@ -61,8 +61,12 @@ HTTPS), z. B. bei Hetzner. Live-Instanz: `https://hebid.de`.
   für den reinen API-Weg.
 - **Zwischenstand in Lernumgebungen**: Antworten und Position werden pro Schüler/in
   **auf dem Server** gespeichert (die iPads wechseln, der Browser-Speicher taugt
-  dafür nicht). Protokoll und Beispiel: [`docs/beispiel-zwischenstand.html`](docs/beispiel-zwischenstand.html);
-  Lehrkräfte können den Fortschritt je Schüler/in oder für alle zurücksetzen.
+  dafür nicht). Lernumgebungen melden außerdem **Fortschritt (%)** und **Einzelergebnisse**; die
+  Lehrkraft sieht Fortschrittsbalken, eine Detailansicht je Schüler/in und den Fortschritt in der
+  Klassenmatrix. Der Connector schreibt das Protokoll allen KI-Chats als Pflicht vor und meldet
+  beim Anlegen fehlende Teile als Hinweise. Protokoll und Beispiel:
+  [`docs/beispiel-zwischenstand.html`](docs/beispiel-zwischenstand.html); Fortschritt lässt sich je
+  Schüler/in oder für alle zurücksetzen.
 - **Lernfortschritt pro Klasse**: Matrix Schüler × Lernumgebungen/Abgaben,
   CSV-Export für Excel.
 - **Dark Mode** folgt der Systemeinstellung.

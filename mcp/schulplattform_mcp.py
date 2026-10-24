@@ -40,6 +40,18 @@ API_KEY = os.environ.get("SCHULPLATTFORM_API_KEY", "").strip()
 mcp = _Server("schulplattform")
 
 
+def _hinweise(data: dict) -> str:
+    """Die Plattform prüft das HTML und meldet fehlende Teile der Schnittstelle."""
+    hinweise = data.get("hinweise") or []
+    if not hinweise:
+        return "\n✓ Die Schnittstelle zur Plattform (Ergebnis, Fortschritt, Zwischenstand) ist vollständig."
+    zeilen = "\n".join(f"- {h}" for h in hinweise)
+    return (
+        "\n⚠ HINWEISE – bitte beheben und die Lernumgebung mit lernumgebung_aktualisieren "
+        f"erneut senden:\n{zeilen}"
+    )
+
+
 class PlattformFehler(Exception):
     """Fehler bei der Kommunikation mit der Plattform (für den Assistenten lesbar)."""
 
@@ -133,21 +145,26 @@ def lernumgebungen_auflisten(klasse_id: int) -> str:
 
 @mcp.tool()
 def lernumgebung_anlegen(klasse_id: int, titel: str, html: str) -> str:
-    """Legt eine neue interaktive Lernumgebung in einer Klasse an.
+    """PFLICHT: Die HTML muss die Schnittstelle zur Plattform enthalten (lesson_result mit
+    detail, lesson_state_request, lesson_state_save mit progress) – sonst sieht die Lehrkraft
+    keinen Fortschritt und die Schüler/innen verlieren ihren Stand. Die Antwort enthält
+    Hinweise zu fehlenden Teilen; behebe sie mit `lernumgebung_aktualisieren`.
+
+    Legt eine neue interaktive Lernumgebung in einer Klasse an.
 
     Args:
         klasse_id: ID der Zielklasse (aus `klassen_auflisten`).
         titel: Titel der Lernumgebung (z. B. „Bit-Labor").
         html: Vollständige, in sich geschlossene HTML-Seite (beginnt mit
             <!DOCTYPE html>, CSS/JS inline, mobil/iPad-tauglich). Keine
-            personenbezogenen Daten abfragen. Punkte optional am Ende per
+            personenbezogenen Daten abfragen. Ergebnis am Ende per
             `window.parent.postMessage({type:'lesson_result', score, max,
-            completed:true}, '*')` melden (optional extra, extra_max für
-            Zusatzpunkte). Zwischenstand pro Schüler/in: beim Start
+            completed:true, detail:{"Aufgabe 1":"richtig"}}, '*')` melden (optional
+            extra, extra_max für Zusatzpunkte). Zwischenstand pro Schüler/in: beim Start
             `{type:'lesson_state_request'}` senden und auf
             `{type:'lesson_state', state}` warten (null = neu beginnen, nach
             ca. 1,5 s ohne Antwort mit leerem Stand starten), bei Änderungen
-            `{type:'lesson_state_save', state}` senden (max. 64 KB, entprellt,
+            `{type:'lesson_state_save', state, progress: 0-100}` senden (max. 64 KB, entprellt,
             Rückmeldung `{type:'lesson_state_saved', ok}`). Kein localStorage:
             die iPads werden geteilt.
 
@@ -161,6 +178,7 @@ def lernumgebung_anlegen(klasse_id: int, titel: str, html: str) -> str:
         f"Lernumgebung angelegt (ID {data.get('id')}).\n"
         f"Zum Ansehen/Testen: {data.get('teacher_url')}\n"
         f"Schüler/innen finden sie nach dem Login automatisch."
+        + _hinweise(data)
     )
 
 
@@ -180,6 +198,7 @@ def lernumgebung_aktualisieren(lernumgebung_id: int, titel: str, html: str) -> s
     return (
         f"Lernumgebung {data.get('id')} aktualisiert.\n"
         f"Zum Ansehen/Testen: {data.get('teacher_url')}"
+        + _hinweise(data)
     )
 
 

@@ -30,6 +30,7 @@
     var MAX_BYTES = 65536;      // same limit as on the server
     var DEBOUNCE_MS = 1500;     // write to the server at most once per 1.5 s
     var current = JSON.parse(document.getElementById('lesson-initial-state').textContent);
+    var currentProgress = null;   // 0-100 as reported by the lesson, or null
     var timer = null, dirty = false, chain = Promise.resolve();
 
     function frameWindow(){
@@ -58,20 +59,21 @@
         clearTimeout(timer); timer = null;
         if(!dirty){ return; }
         dirty = false;
-        var snapshot = current;
+        var snapshot = current, progress = currentProgress;
         chain = chain.then(function(){
-            return post(stateUrl, {state: snapshot}, keepalive)
+            return post(stateUrl, {state: snapshot, progress: progress}, keepalive)
                 .then(function(r){ tell({type: 'lesson_state_saved', ok: r.ok}); })
                 .catch(function(){ tell({type: 'lesson_state_saved', ok: false}); });
         });
     }
-    function save(state){
+    function save(state, progress){
         if(state === undefined){ return; }
         var size = new Blob([JSON.stringify(state)]).size;
         if(size > MAX_BYTES){
             tell({type: 'lesson_state_saved', ok: false, error: 'too_large'});
             return;
         }
+        if(typeof progress === 'number' && isFinite(progress)){ currentProgress = progress; }
         current = state;            // later requests get the newest state, even unsent
         dirty = true;
         clearTimeout(timer);
@@ -92,7 +94,7 @@
         if(d.type === 'lesson_state_request'){
             tell({type: 'lesson_state', state: current});
         } else if(d.type === 'lesson_state_save'){
-            save(d.state);
+            save(d.state, d.progress);
         } else if(d.type === 'lesson_result'){
             post(reportUrl, {
                 score: d.score,

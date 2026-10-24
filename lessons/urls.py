@@ -10,6 +10,7 @@ urlpatterns = [
     path("lernumgebung/<int:pk>/", views.lesson_detail, name="lesson_detail"),
     path("lernumgebung/<int:pk>/bearbeiten/", views.lesson_edit, name="lesson_edit"),
     path("lernumgebung/<int:pk>/vorschau/", views.lesson_preview, name="lesson_preview"),
+    path("lernumgebung/<int:pk>/schueler/<int:student_pk>/", views.result_detail, name="result_detail"),
     path("lernumgebung/<int:pk>/loeschen/", views.lesson_delete, name="lesson_delete"),
     path(
         "lernumgebung/<int:pk>/zwischenstand/zuruecksetzen/",

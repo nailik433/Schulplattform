@@ -62,7 +62,7 @@
 <div class="card" style="padding:0;overflow-x:auto;">
     <table class="data">
         <thead>
-            <tr><th>Kennung</th><th>Status</th><th>Punkte</th><th>Zwischenstand</th></tr>
+            <tr><th>Kennung</th><th>Status</th><th>Punkte</th><th>Fortschritt</th><th>Zwischenstand</th><th></th></tr>
         </thead>
         <tbody>
             {% for row in roster %}
@@ -88,6 +88,13 @@
                             <span class="chip chip-info" title="Zusatzpunkte" style="margin-left:6px;">+{{ row.result.extra|floatformat:"-2" }}{% if row.result.extra_max %} / {{ row.result.extra_max|floatformat:"-2" }}{% endif %} Zusatz</span>
                         {% endif %}
                     </td>
+                    <td style="white-space:nowrap;">
+                        {% if row.progress is not None %}
+                            <span class="bar{% if row.progress < 50 %} low{% endif %}" title="{{ row.progress }} %"><span style="width:{{ row.progress }}%;"></span></span>{{ row.progress }} %
+                        {% else %}
+                            <span class="muted">—</span>
+                        {% endif %}
+                    </td>
                     <td>
                         {% if row.state_at %}
                             <div class="actions-cell">
@@ -102,9 +109,14 @@
                             <span class="muted">—</span>
                         {% endif %}
                     </td>
+                    <td>
+                        {% if row.result or row.state_at %}
+                            <a class="btn btn-secondary btn-small" href="{% url 'lessons:result_detail' lesson.pk row.student.pk %}">Details</a>
+                        {% endif %}
+                    </td>
                 </tr>
             {% empty %}
-                <tr><td colspan="4" class="muted">Noch keine aktiven Schüler/innen in dieser Klasse.</td></tr>
+                <tr><td colspan="6" class="muted">Noch keine aktiven Schüler/innen in dieser Klasse.</td></tr>
             {% endfor %}
         </tbody>
     </table>

@@ -75,16 +75,14 @@ Antwort beim Anlegen: `{"id": 12, "title": "...", "teacher_url": "https://hebid.
   prüfen, dass alles stimmt.
 - **Keine personenbezogenen Daten** abfragen (keine Namen). Die Plattform ordnet
   Ergebnisse automatisch der/dem eingeloggten Schüler/in zu.
-- **Ergebnis-Rückmeldung (optional, aber empfohlen)**: Wenn es Punkte gibt,
-  melde sie am Ende an die Plattform:
-  ```js
-  window.parent.postMessage({type:'lesson_result', score: ERREICHTE_PUNKTE, max: MAX_PUNKTE, completed:true}, '*');
-  ```
-  Dann sehe ich pro Schüler/in Status und Punkte.
+- **Schnittstelle zur Plattform ist Pflicht** (siehe nächster Abschnitt): Ergebnis,
+  Einzelergebnisse, Zwischenstand und Fortschritt. Die Plattform kann nicht in die
+  HTML-Datei schauen – sie weiß nur, was die Lernumgebung per `postMessage` meldet.
+  Ohne diese Meldungen sehe ich als Lehrkraft nur „geöffnet“.
 
 ---
 
-## Zwischenstand speichern (wichtig, weil die iPads wechseln)
+## Schnittstelle zur Plattform – Pflicht (Ergebnis, Fortschritt, Zwischenstand)
 
 Die iPads wechseln zwischen den Schülern. Lernumgebungen dürfen deshalb **nichts in
 `localStorage`/`sessionStorage`** ablegen – der nächste Schüler würde den Stand des
@@ -95,16 +93,18 @@ Schülerkonto**. Das geht über drei kleine Nachrichten:
 |---|---|---|
 | Lernumgebung → Plattform | `{type:'lesson_state_request'}` | „Gib mir meinen gespeicherten Stand.“ |
 | Plattform → Lernumgebung | `{type:'lesson_state', state: <JSON oder null>}` | `null` heißt: noch nichts gespeichert, neu beginnen. |
-| Lernumgebung → Plattform | `{type:'lesson_state_save', state: <JSON>}` | Stand speichern (entprellt ca. 1,5 s, letzte Nachricht gewinnt, max. 64 KB, `null` löscht). |
+| Lernumgebung → Plattform | `{type:'lesson_state_save', state: <JSON>, progress: 0-100}` | Stand speichern (entprellt ca. 1,5 s, letzte Nachricht gewinnt, max. 64 KB, `null` löscht). `progress` zeigt mir einen Fortschrittsbalken. |
+| Lernumgebung → Plattform | `{type:'lesson_result', score, max, completed, extra, extra_max, detail}` | Ergebnis. `detail` = flaches Objekt mit Einzelergebnissen, z. B. `{"Aufgabe 1":"richtig"}` – sichtbar in der Detailansicht. |
 | Plattform → Lernumgebung | `{type:'lesson_state_saved', ok:true}` | Optionale Rückmeldung. |
 
 - Antwort nur annehmen, wenn `event.source === window.parent`.
 - Kommt nach ca. 1,5 s keine Antwort (z. B. Vorschau in neuem Tab), mit leerem Stand starten.
 - In der **Lehrer-Vorschau** wird nichts gespeichert (Antwort immer `state:null`).
 - Zusatzpunkte beim Ergebnis: `lesson_result` darf zusätzlich `extra` und `extra_max` enthalten.
+- Nach dem Anlegen prüft die Plattform das HTML und liefert fehlende Teile als **Hinweise** zurück (`hinweise` in der API-Antwort, im Connector als „⚠ HINWEISE“). Jeden Hinweis beheben und mit `lernumgebung_aktualisieren` erneut senden.
 - Ein fertiges, getestetes Beispiel steht in [`docs/beispiel-zwischenstand.html`](./beispiel-zwischenstand.html);
   der Helfer `PlatformState` daraus lässt sich direkt übernehmen.
-- Lehrkräfte können den Stand pro Schüler/in oder für alle auf der Seite der Lernumgebung zurücksetzen.
+- Lehrkräfte sehen pro Schüler/in Fortschrittsbalken und Einzelergebnisse und können den Stand zurücksetzen.
 
 ---
 

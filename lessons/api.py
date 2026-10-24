@@ -16,6 +16,7 @@ from django.views.decorators.http import require_GET, require_http_methods
 from schools.models import SchoolClass
 
 from .models import ApiKey, Lesson
+from .protocol import check_protocol
 
 
 class ApiError(Exception):
@@ -85,6 +86,13 @@ def _lesson_data(lesson, base):
     }
 
 
+def _with_hints(data, html):
+    """Attach what the HTML forgot to report to the platform, so whoever (or
+    whatever assistant) uploaded the lesson learns about it right away."""
+    data["hinweise"] = check_protocol(html)
+    return data
+
+
 def lessons_data(teacher, class_id=None, base=""):
     classes = teacher_classes(teacher)
     lessons = Lesson.objects.filter(school_class__in=classes).select_related("school_class")
@@ -120,7 +128,7 @@ def upsert_lesson(teacher, *, title, html, class_id=None, lesson_id=None, base="
         lesson.title = title
         lesson.html = html
         lesson.save()
-        return _lesson_data(lesson, base), False
+        return _with_hints(_lesson_data(lesson, base), html), False
 
     school_class = classes.filter(id=class_id).first()
     if school_class is None:
@@ -131,7 +139,7 @@ def upsert_lesson(teacher, *, title, html, class_id=None, lesson_id=None, base="
     lesson = Lesson.objects.create(
         school_class=school_class, title=title, html=html, created_by=teacher
     )
-    return _lesson_data(lesson, base), True
+    return _with_hints(_lesson_data(lesson, base), html), True
 
 
 # --------------------------------------------------------------------------

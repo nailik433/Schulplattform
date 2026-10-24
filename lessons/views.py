@@ -27,6 +27,14 @@ def _teacher_class_or_404(user, class_pk):
     )
 
 
+def _row_progress(result, state):
+    """0-100 for the teacher's table: finished = 100, otherwise what the lesson
+    reported with its last save (``None`` if it reported nothing)."""
+    if result is not None and result.completed:
+        return 100
+    return state.progress if state is not None else None
+
+
 def _teacher_lesson_or_404(user, pk):
     return get_object_or_404(
         Lesson.objects.filter(school_class__memberships__teacher=user)
@@ -68,6 +76,18 @@ def _number(value):
         return None
     value = float(value)
     return value if math.isfinite(value) else None
+
+
+def _progress(value):
+    """A progress percentage as int 0-100, otherwise ``None``."""
+    number = _number(value)
+    if number is None:
+        return None
+    return max(0, min(100, round(number)))
+
+
+def _compact_size(value):
+    return len(json.dumps(value, separators=(",", ":"), ensure_ascii=False).encode("utf-8"))
 
 
 def _lesson_html_response(html):
@@ -126,14 +146,15 @@ def lesson_detail(request, pk):
         r.student_id: r
         for r in lesson.results.select_related("student")
     }
-    states = dict(lesson.states.values_list("student_id", "updated_at"))
+    states = {s.student_id: s for s in lesson.states.only("student_id", "updated_at", "progress")}
     roster = []
     for student in lesson.school_class.students.filter(is_active=True):
         roster.append(
             {
                 "student": student,
                 "result": results.get(student.id),
-                "state_at": states.get(student.id),
+                "state_at": states[student.id].updated_at if student.id in states else None,
+                "progress": _row_progress(results.get(student.id), states.get(student.id)),
             }
         )
     done = sum(1 for row in roster if row["result"] and row["result"].completed)
@@ -168,6 +189,40 @@ def lesson_delete(request, pk):
     lesson.delete()
     messages.success(request, f"Lernumgebung „{title}“ wurde gelöscht.")
     return redirect(school_class.get_absolute_url())
+
+
+def _readable(value):
+    if isinstance(value, bool):
+        return "ja" if value else "nein"
+    if isinstance(value, (str, int, float)):
+        return str(value)
+    return json.dumps(value, ensure_ascii=False, indent=2)
+
+
+@login_required
+def result_detail(request, pk, student_pk):
+    """What one pupil reported for a lesson: points, bonus points, the
+    individual results (``detail``) and the raw saved state."""
+    lesson = _teacher_lesson_or_404(request.user, pk)
+    student = get_object_or_404(lesson.school_class.students, pk=student_pk)
+    result = LessonResult.objects.filter(lesson=lesson, student=student).first()
+    state = LessonState.objects.filter(lesson=lesson, student=student).first()
+    detail = (result.detail if result and isinstance(result.detail, dict) else {}) or {}
+    shown = list(detail.items())[:200]
+    return render(
+        request,
+        "lessons/result_detail.html",
+        {
+            "lesson": lesson,
+            "student": student,
+            "result": result,
+            "state": state,
+            "progress": _row_progress(result, state),
+            "detail_rows": [(str(key), _readable(value)) for key, value in shown],
+            "detail_truncated": len(detail) > len(shown),
+            "state_json": json.dumps(state.state, ensure_ascii=False, indent=2) if state else "",
+        },
+    )
 
 
 @login_required
@@ -268,8 +323,9 @@ def lesson_report(request, pk):
     if extra_max is not None:
         result.extra_max = extra_max
     result.completed = bool(payload.get("completed", True))
-    if isinstance(payload.get("detail"), dict):
-        result.detail = payload["detail"]
+    detail = payload.get("detail")
+    if isinstance(detail, dict) and _compact_size(detail) <= STATE_MAX_BYTES:
+        result.detail = detail
     result.save()
     return JsonResponse({"ok": True})
 
@@ -307,9 +363,11 @@ def lesson_state_save(request, pk):
     size = len(json.dumps(state, separators=(",", ":"), ensure_ascii=False).encode("utf-8"))
     if size > STATE_MAX_BYTES:
         return JsonResponse({"ok": False, "error": "too_large"}, status=413)
-    LessonState.objects.update_or_create(
-        lesson=lesson, student=student, defaults={"state": state}
-    )
+    defaults = {"state": state}
+    progress = _progress(payload.get("progress"))
+    if progress is not None:  # a save without progress keeps the last known value
+        defaults["progress"] = progress
+    LessonState.objects.update_or_create(lesson=lesson, student=student, defaults=defaults)
     return JsonResponse({"ok": True})
 
 
