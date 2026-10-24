@@ -65,7 +65,7 @@ unter `hebid.de` live.
 - [ ] Per SSH auf den Hetzner-Server einloggen (IP `46.224.216.58`).
 - [ ] Prüfen, auf welchem Zweig der Server steht:
       ```bash
-      cd ~/Schulplattform && git branch --show-current
+      cd ~/schulplattform && git branch --show-current
       ```
 - [ ] Falls nicht `main` (und du hast Punkt 1 gemacht): auf `main` wechseln:
       ```bash

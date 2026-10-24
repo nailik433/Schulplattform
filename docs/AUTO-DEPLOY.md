@@ -52,7 +52,7 @@ repository secret**. Diese vier anlegen:
 |---|---|
 | `DEPLOY_HOST` | `46.224.216.58` (die Server-IP) |
 | `DEPLOY_USER` | der SSH-Benutzer, z. B. `root` |
-| `DEPLOY_PATH` | der Projektordner auf dem Server, z. B. `/root/Schulplattform` |
+| `DEPLOY_PATH` | der Projektordner auf dem Server, vermutlich `/root/schulplattform` (siehe unten, mit `pwd` prüfen) |
 | `DEPLOY_SSH_KEY` | der **komplette Inhalt** der Datei `~/.ssh/hebid_deploy` (privater Schlüssel) |
 
 > Den privaten Schlüssel so auslesen und vollständig (inkl. der
@@ -60,9 +60,11 @@ repository secret**. Diese vier anlegen:
 > ```bash
 > cat ~/.ssh/hebid_deploy
 > ```
-> Den Projektpfad findest du auf dem Server mit:
+> Den Projektpfad findest du auf dem Server mit (Groß-/Kleinschreibung
+> zählt!). Laut Server-Anleitung heißt der Ordner `schulplattform`:
 > ```bash
-> cd ~/Schulplattform && pwd
+> ls ~            # zeigt den Ordnernamen
+> cd ~/schulplattform && pwd
 > ```
 
 ## Schritt 4: Testen

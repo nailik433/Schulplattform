@@ -30,10 +30,17 @@ jobs:
           script: |
             set -euo pipefail
             cd "${{ secrets.DEPLOY_PATH }}"
+            OLD="$(git rev-parse HEAD)"
             echo "→ Neuesten Stand von main holen ..."
             git fetch --all --prune
             git checkout main
             git reset --hard origin/main
+            NEW="$(git rev-parse HEAD)"
             echo "→ Container neu bauen und starten ..."
             docker compose up -d --build
+            # Caddy liest die Caddyfile nur beim Start: bei Änderung neu starten.
+            if ! git diff --quiet "$OLD" "$NEW" -- Caddyfile; then
+                echo "→ Caddyfile geändert – Caddy neu starten ..."
+                docker compose restart caddy
+            fi
             echo "✓ Deploy abgeschlossen."
