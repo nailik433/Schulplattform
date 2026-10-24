@@ -3,6 +3,8 @@ from datetime import timedelta
 from django import forms
 from django.forms.utils import to_current_timezone
 
+from materials.models import MaterialFile
+
 from .models import MAX_UPLOAD_SIZE, Assignment
 
 
@@ -105,6 +107,11 @@ class AssignmentForm(forms.ModelForm):
         required=False,
         help_text="Optional. Ohne Datum gibt es keine Frist. Die Uhrzeit gilt in 30-Minuten-Schritten.",
     )
+    material_files = forms.ModelMultipleChoiceField(
+        queryset=MaterialFile.objects.none(),
+        required=False,
+        label="Aus „Mein Material“",
+    )
 
     class Meta:
         model = Assignment
@@ -113,6 +120,11 @@ class AssignmentForm(forms.ModelForm):
             "title": forms.TextInput(attrs={"placeholder": "z. B. Arbeitsblatt 3 – Schleifen"}),
             "description": forms.Textarea(attrs={"rows": 4}),
         }
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if user is not None:
+            self.fields["material_files"].queryset = MaterialFile.objects.filter(owner=user)
 
 
 class SubmissionForm(forms.Form):

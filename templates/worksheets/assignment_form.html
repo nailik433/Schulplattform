@@ -43,6 +43,13 @@
                     {% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}
                     {{ field.errors }}
                 </p>
+            {% elif field.name == "material_files" %}
+                <div style="margin-bottom:16px;">
+                    <label>Aus „Mein Material“ hinzufügen</label>
+                    {% include "materials/_picker.html" %}
+                    <span class="helptext">Die Dateien werden kopiert – späteres Umbenennen oder Löschen im Material ändert dieses Arbeitsblatt nicht.</span>
+                    {{ field.errors }}
+                </div>
             {% else %}
                 <p>
                     {{ field.label_tag }}

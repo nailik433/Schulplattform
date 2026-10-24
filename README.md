@@ -41,6 +41,14 @@ HTTPS), z. B. bei Hetzner. Live-Instanz: `https://hebid.de`.
   Ergebnis-Übersicht pro Schüler/in (Status, Punkte, Prozent).
 - **Klassen mit Kolleg/innen teilen**: Kolleg/innen sehen nur die geteilte
   Klasse, nie die anderen Kurse.
+- **Mein Material**: private Dateiablage pro Lehrkraft mit beliebig verschachtelten
+  Ordnern (Drag & Drop, umbenennen, verschieben, löschen). Beim Austeilen eines
+  Arbeitsblatts oder im Projekt wählst du Dateien direkt daraus aus – sie werden
+  kopiert, spätere Änderungen im Material betreffen ausgeteilte Blätter nicht.
+- **Projekte**: Vorlagen aus Bausteinen (Lernumgebung, Arbeitsblatt, **Arbeitsauftrag**
+  nur mit Abgabe, z. B. „Erstelle eine Präsentation“), die du in beliebig vielen
+  Klassen einsetzt. Schüler/innen sehen ein Projekt als gebündelte Karte mit
+  Fortschritt („2 von 3 erledigt“).
 
 **KI-Schnittstelle („Weg B": Cowork / Claude Code)**
 - Jede Lehrkraft hat einen **API-Schlüssel** (Dashboard → „KI & API").

@@ -187,11 +187,14 @@ def class_create(request):
 def class_detail(request, pk):
     school_class = _get_teacher_class(request.user, pk)
     students = list(school_class.students.all())
-    assignments = school_class.assignments.annotate(
+    assignments = school_class.assignments.select_related("class_project").annotate(
         n_files=Count("files", distinct=True),
         n_submissions=Count("submissions", distinct=True),
     )
-    lessons = school_class.lessons.annotate(
+    class_projects = school_class.projects.annotate(
+        n_lessons=Count("lessons", distinct=True), n_assignments=Count("assignments", distinct=True)
+    )
+    lessons = school_class.lessons.select_related("class_project").annotate(
         n_done=Count("results", filter=Q(results__completed=True), distinct=True)
     )
     memberships = school_class.memberships.select_related("teacher")
@@ -207,6 +210,7 @@ def class_detail(request, pk):
         "active_count": sum(1 for s in students if s.is_active),
         "assignments": assignments,
         "lessons": lessons,
+        "class_projects": class_projects,
         "student_form": StudentForm(),
         "count_form": CountStudentForm(),
         "bulk_form": BulkStudentForm(),
@@ -672,55 +676,106 @@ def student_space(request, token):
     return redirect("schools:student_home")
 
 
+_OPEN_STATUSES = ("open", "soon", "overdue")
+_STATUS_PRIORITY = {"overdue": 0, "soon": 1, "open": 2, "late": 3, "done": 3, "material": 4}
+
+
+def _assignment_status(assignment, submission, now):
+    if not assignment.collect_submissions:
+        return "material"
+    if submission:
+        return "late" if submission.is_late else "done"
+    if assignment.due_date and assignment.due_date < now:
+        return "overdue"
+    if assignment.due_date and assignment.due_date - now < timedelta(hours=48):
+        return "soon"
+    return "open"
+
+
+def _lesson_done(row):
+    return bool(row["result"] and row["result"].completed)
+
+
 def student_home(request):
-    """Start page of a logged-in pupil: lessons and worksheets, each with a
-    clear status (open / due soon / overdue / done)."""
+    """Start page of a logged-in pupil: projects (bundled cards with progress),
+    then the remaining lessons and worksheets, each with a clear status."""
     student = get_current_student(request)
     if student is None:
         return redirect("schools:student_login")
 
     now = timezone.now()
-    assignments = student.school_class.assignments.all().prefetch_related("files")
     my_subs = {
         s.assignment_id: s
         for s in student.submissions.select_related("assignment").prefetch_related("files")
     }
-    rows, open_count = [], 0
-    for a in assignments:
-        sub = my_subs.get(a.id)
-        if not a.collect_submissions:
-            status = "material"
-        elif sub:
-            status = "late" if sub.is_late else "done"
-        elif a.due_date and a.due_date < now:
-            status = "overdue"
-        elif a.due_date and a.due_date - now < timedelta(hours=48):
-            status = "soon"
-        else:
-            status = "open"
-        if status in ("open", "soon", "overdue"):
-            open_count += 1
-        rows.append({"assignment": a, "submission": sub, "status": status})
-    # Urgent things first: overdue, due soon, open; then done; material last.
-    priority = {"overdue": 0, "soon": 1, "open": 2, "late": 3, "done": 3, "material": 4}
-    rows.sort(key=lambda row: priority[row["status"]])
-
     results = {r.lesson_id: r for r in student.lesson_results.all()}
-    lesson_rows = []
-    for lesson in student.school_class.lessons.all():
-        result = results.get(lesson.id)
-        if not (result and result.completed):
-            open_count += 1
-        lesson_rows.append({"lesson": lesson, "result": result})
-    lesson_rows.sort(key=lambda row: bool(row["result"] and row["result"].completed))
+
+    assignment_rows = []
+    for a in student.school_class.assignments.all().prefetch_related("files"):
+        sub = my_subs.get(a.id)
+        assignment_rows.append(
+            {"assignment": a, "submission": sub, "status": _assignment_status(a, sub, now)}
+        )
+    lesson_rows = [
+        {"lesson": lesson, "result": results.get(lesson.id)}
+        for lesson in student.school_class.lessons.all()
+    ]
+
+    open_count = sum(1 for r in assignment_rows if r["status"] in _OPEN_STATUSES)
+    open_count += sum(1 for r in lesson_rows if not _lesson_done(r))
+
+    # Items that belong to a project are shown on its card, the rest as before.
+    standalone_assignments = sorted(
+        (r for r in assignment_rows if r["assignment"].class_project_id is None),
+        key=lambda r: _STATUS_PRIORITY[r["status"]],
+    )
+    standalone_lessons = sorted(
+        (r for r in lesson_rows if r["lesson"].class_project_id is None), key=_lesson_done
+    )
+
+    projects = []
+    for cp in student.school_class.projects.all():
+        items = [
+            {"kind": "lesson", "row": r, "order": (r["lesson"].project_order, r["lesson"].pk)}
+            for r in lesson_rows
+            if r["lesson"].class_project_id == cp.pk
+        ]
+        items += [
+            {"kind": "assignment", "row": r, "order": (r["assignment"].project_order, r["assignment"].pk)}
+            for r in assignment_rows
+            if r["assignment"].class_project_id == cp.pk
+        ]
+        if not items:
+            continue
+        items.sort(key=lambda i: i["order"])
+        total = done = 0
+        for item in items:
+            row = item["row"]
+            if item["kind"] == "lesson":
+                total += 1
+                done += _lesson_done(row)
+            elif row["status"] != "material":  # pure material needs no action
+                total += 1
+                done += row["status"] in ("done", "late")
+        projects.append(
+            {
+                "project": cp,
+                "items": items,
+                "done": done,
+                "total": total,
+                "percent": round(100 * done / total) if total else 0,
+                "complete": bool(total) and done == total,
+            }
+        )
 
     return render(
         request,
         "students/home.html",
         {
             "student": student,
-            "rows": rows,
-            "lesson_rows": lesson_rows,
+            "rows": standalone_assignments,
+            "lesson_rows": standalone_lessons,
+            "projects": projects,
             "open_count": open_count,
         },
     )

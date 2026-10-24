@@ -28,6 +28,15 @@ class Lesson(models.Model):
         blank=True,
         related_name="lessons_created",
     )
+    # Set when this lesson was created from a project template.
+    class_project = models.ForeignKey(
+        "projects.ClassProject",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="lessons",
+    )
+    project_order = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

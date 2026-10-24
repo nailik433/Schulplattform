@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}{% if folder %}{{ folder.name }}{% else %}Mein Material{% endif %}{% endblock %}
+
+{% block content %}
+<nav class="crumbs" aria-label="Pfad">
+    {% if folder %}
+        <a href="{% url 'materials:home' %}">📁 Mein Material</a>
+        {% for c in crumbs %}
+            <span>/</span>
+            {% if forloop.last %}<strong>{{ c.name }}</strong>{% else %}<a href="{{ c.get_absolute_url }}">{{ c.name }}</a>{% endif %}
+        {% endfor %}
+    {% else %}
+        <strong>📁 Mein Material</strong>
+    {% endif %}
+</nav>
+
+<div class="page-head">
+    <div>
+        <h1>{% if folder %}{{ folder.name }}{% else %}Mein Material{% endif %}</h1>
+        <p class="subtitle">
+            Deine private Ablage. Schüler/innen sehen nur, was du daraus in einer Klasse austeilst
+            · insgesamt {{ total_size }} gespeichert
+        </p>
+    </div>
+    <details class="new-folder">
+        <summary class="btn btn-secondary">+ Neuer Ordner</summary>
+        <form method="post" action="{% url 'materials:folder_create' %}">
+            {% csrf_token %}
+            <input type="hidden" name="parent" value="{{ folder.pk|default_if_none:'' }}">
+            <input type="text" name="name" placeholder="Name des Ordners" maxlength="120" required>
+            <button type="submit" class="btn">Anlegen</button>
+        </form>
+    </details>
+</div>
+
+<form method="post" enctype="multipart/form-data" action="{% url 'materials:upload' %}" class="submit-form">
+    {% csrf_token %}
+    <input type="hidden" name="folder" value="{{ folder.pk|default_if_none:'' }}">
+    <label class="dropzone dropzone-lg js-dropzone">
+        <input type="file" name="files" multiple required>
+        <span class="dz-icon">📥</span>
+        <span class="dz-title">Dateien hierher ziehen</span>
+        <span class="dz-sub">oder tippen, um Dateien auszuwählen · bis 25 MB pro Datei</span>
+        <ul class="dz-list"></ul>
+    </label>
+    <div class="submit-actions">
+        <button type="submit" class="btn" disabled>Hochladen{% if folder %} in „{{ folder.name }}“{% endif %}</button>
+    </div>
+</form>
+
+<h2 class="section-title">Inhalt</h2>
+{% if folder_rows or file_rows %}
+    <div class="card" style="padding:0;overflow-x:auto;">
+        <table class="data mat-table">
+            <tbody>
+                {% for row in folder_rows %}
+                    <tr>
+                        <td class="name">
+                            <a href="{{ row.folder.get_absolute_url }}">📁 {{ row.folder.name }}</a>
+                            <span class="muted" style="margin-left:6px;font-size:.82rem;">
+                                {{ row.folder.n_folders }} Ordner · {{ row.folder.n_files }} Datei{{ row.folder.n_files|pluralize:"en" }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="actions-cell">
+                                <button type="button" class="btn btn-secondary btn-small"
+                                        onclick="spPrompt('{% url 'materials:folder_rename' row.folder.pk %}', 'Neuer Name für den Ordner:', '{{ row.folder.name|escapejs }}')">Umbenennen</button>
+                                <form class="inline-form" method="post" action="{% url 'materials:folder_move' row.folder.pk %}">
+                                    {% csrf_token %}
+                                    <select name="target" aria-label="Verschieben nach" onchange="if(this.value!=='_'){this.form.submit()}">
+                                        <option value="_">Verschieben nach …</option>
+                                        {% if row.to_root %}<option value="root">📁 Mein Material (oben)</option>{% endif %}
+                                        {% for pk, label in row.options %}<option value="{{ pk }}">{{ label }}</option>{% endfor %}
+                                    </select>
+                                </form>
+                                <form class="inline-form" method="post" action="{% url 'materials:folder_delete' row.folder.pk %}"
+                                      onsubmit="return confirm('Ordner „{{ row.folder.name|escapejs }}“ mit ALLEM Inhalt löschen?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger btn-small">Löschen</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+                {% for row in file_rows %}
+                    <tr>
+                        <td class="name">
+                            <a href="{{ row.file.get_download_url }}">📄 {{ row.file.original_name }}</a>
+                            <span class="muted" style="margin-left:6px;font-size:.82rem;">{{ row.size }} · {{ row.file.created_at|date:"d.m.Y" }}</span>
+                        </td>
+                        <td>
+                            <div class="actions-cell">
+                                <button type="button" class="btn btn-secondary btn-small"
+                                        onclick="spPrompt('{% url 'materials:file_rename' row.file.pk %}', 'Neuer Name für die Datei:', '{{ row.file.original_name|escapejs }}')">Umbenennen</button>
+                                <form class="inline-form" method="post" action="{% url 'materials:file_move' row.file.pk %}">
+                                    {% csrf_token %}
+                                    <select name="target" aria-label="Verschieben nach" onchange="if(this.value!=='_'){this.form.submit()}">
+                                        <option value="_">Verschieben nach …</option>
+                                        {% if row.to_root %}<option value="root">📁 Mein Material (oben)</option>{% endif %}
+                                        {% for pk, label in row.options %}<option value="{{ pk }}">{{ label }}</option>{% endfor %}
+                                    </select>
+                                </form>
+                                <form class="inline-form" method="post" action="{% url 'materials:file_delete' row.file.pk %}"
+                                      onsubmit="return confirm('Datei „{{ row.file.original_name|escapejs }}“ löschen?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger btn-small">Löschen</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="card empty-state">
+        <div class="empty-icon">🗂️</div>
+        <p class="muted" style="margin:0;">
+            {% if folder %}Dieser Ordner ist noch leer.{% else %}Noch nichts hier.{% endif %}
+            Ziehe oben Dateien hinein oder lege einen Ordner an.
+        </p>
+    </div>
+{% endif %}
+{% endblock %}

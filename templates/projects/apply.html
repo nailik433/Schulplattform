@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}„{{ project.title }}“ einsetzen{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{{ project.get_absolute_url }}">← {{ project.title }}</a>
+
+<div class="card card-narrow">
+    <h1>Projekt einsetzen</h1>
+    <p class="subtitle">
+        „{{ project.title }}“ mit {{ project.items.count }} Baustein{{ project.items.count|pluralize:"en" }}
+        wird in die gewählten Klassen kopiert. Spätere Änderungen am Projekt betreffen bereits eingesetzte Klassen nicht.
+    </p>
+    <form method="post" novalidate>
+        {% csrf_token %}
+        <div style="margin-bottom:16px;">
+            <label>{{ form.classes.label }}</label>
+            <div class="check-list">{{ form.classes }}</div>
+            {{ form.classes.errors }}
+        </div>
+        <p>
+            <label for="{{ form.due_date.id_for_label }}">{{ form.due_date.label }}</label>
+            {{ form.due_date }}
+            <span class="helptext">{{ form.due_date.help_text }}</span>{{ form.due_date.errors }}
+        </p>
+        <div class="form-actions">
+            <button type="submit" class="btn">Einsetzen</button>
+            <a class="btn btn-secondary" href="{{ project.get_absolute_url }}">Abbrechen</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

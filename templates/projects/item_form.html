@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}{% if item %}Baustein bearbeiten{% else %}{{ kind_label }} hinzufügen{% endif %}{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{{ project.get_absolute_url }}">← {{ project.title }}</a>
+
+<div class="card">
+    <h1>{% if item %}Baustein bearbeiten{% else %}{{ kind_label }} hinzufügen{% endif %}</h1>
+    <p class="subtitle">
+        {% if kind == "lesson" %}Eine interaktive HTML-Seite, die Schüler/innen am Bildschirm bearbeiten.
+        {% elif kind == "worksheet" %}Ein Arbeitsblatt aus deinen Dateien in „Mein Material“.
+        {% else %}Nur eine Aufforderung – Schüler/innen laden dazu eine Datei hoch, z. B. eine Präsentation.{% endif %}
+    </p>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        <p>
+            <label for="{{ form.title.id_for_label }}">Titel</label>
+            {{ form.title }}{{ form.title.errors }}
+        </p>
+
+        {% if kind == "lesson" %}
+            <p>
+                <label for="{{ form.html.id_for_label }}">HTML der Lernumgebung</label>
+                <span id="html-drop" class="dropzone" style="padding:10px;margin-bottom:8px;">
+                    <span class="dz-hint" style="margin:0;">📄 .html-Datei hierher ziehen (füllt das Feld) – oder unten einfügen</span>
+                </span>
+                {{ form.html }}{{ form.html.errors }}
+            </p>
+            <p>
+                <label for="{{ form.copy_from_lesson.id_for_label }}">{{ form.copy_from_lesson.label }}</label>
+                {{ form.copy_from_lesson }}
+                <span class="helptext">Nur wirksam, wenn das HTML-Feld oben leer ist.</span>
+            </p>
+        {% elif kind == "worksheet" %}
+            <p>
+                <label for="{{ form.description.id_for_label }}">Aufgabenstellung <span class="muted" style="font-weight:400;">(optional)</span></label>
+                {{ form.description }}{{ form.description.errors }}
+            </p>
+            <div style="margin-bottom:16px;">
+                <label>Dateien aus „Mein Material“</label>
+                {% include "materials/_picker.html" %}
+                {{ form.material_files.errors }}
+                <span class="helptext">
+                    Die Dateien werden beim Einsetzen in die Klasse kopiert. <a href="{% url 'materials:home' %}" target="_blank" rel="noopener">Mein Material öffnen ↗</a>
+                </span>
+            </div>
+            <p>
+                <label class="mat-check" style="font-weight:600;">{{ form.collect_submissions }} Abgaben einsammeln</label>
+                <span class="helptext">Wenn aktiv, können Schüler/innen eine Lösung hochladen.</span>
+            </p>
+        {% else %}
+            <p>
+                <label for="{{ form.description.id_for_label }}">Arbeitsauftrag</label>
+                {{ form.description }}{{ form.description.errors }}
+                <span class="helptext">Was sollen die Schüler/innen abgeben? Die Abgabe (Datei-Upload) ist automatisch aktiv.</span>
+            </p>
+        {% endif %}
+
+        <div class="form-actions">
+            <button type="submit" class="btn">{% if item %}Speichern{% else %}Hinzufügen{% endif %}</button>
+            <a class="btn btn-secondary" href="{{ project.get_absolute_url }}">Abbrechen</a>
+        </div>
+    </form>
+</div>
+
+{% if kind == "lesson" %}
+<script>
+(function(){
+    var dz = document.getElementById('html-drop');
+    var ta = document.getElementById('{{ form.html.id_for_label }}');
+    if(!dz || !ta) return;
+    ['dragenter','dragover'].forEach(function(ev){
+        dz.addEventListener(ev, function(e){ e.preventDefault(); dz.classList.add('drag'); });
+    });
+    dz.addEventListener('dragleave', function(e){ if(e.target===dz) dz.classList.remove('drag'); });
+    dz.addEventListener('drop', function(e){
+        e.preventDefault(); dz.classList.remove('drag');
+        var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        if(!f) return;
+        var r = new FileReader();
+        r.onload = function(){ ta.value = r.result; };
+        r.readAsText(f);
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}

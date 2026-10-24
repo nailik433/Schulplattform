@@ -1,0 +1,18 @@
+<ul class="mat-tree{% if root %} root{% endif %}">
+    {% for node in nodes %}
+        <li>
+            <details{% if node.has_selected %} open{% endif %}>
+                <summary>📁 {{ node.folder.name }}</summary>
+                {% include "materials/_picker_level.html" with nodes=node.children files=node.files root=False %}
+            </details>
+        </li>
+    {% endfor %}
+    {% for f in files %}
+        <li>
+            <label class="mat-check">
+                <input type="checkbox" name="material_files" value="{{ f.pk }}"{% if f.pk in selected %} checked{% endif %}>
+                <span>📄 {{ f.original_name }}</span>
+            </label>
+        </li>
+    {% endfor %}
+</ul>

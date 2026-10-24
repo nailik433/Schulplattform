@@ -14,165 +14,36 @@
     <div class="summary-chips">
         {% if open_count %}
             <span class="chip chip-warn">{{ open_count }} offen</span>
-        {% elif rows or lesson_rows %}
+        {% elif rows or lesson_rows or projects %}
             <span class="chip chip-ok">Alles erledigt 🎉</span>
         {% endif %}
     </div>
 </div>
 
+{% for p in projects %}
+    {% include "students/_project.html" %}
+{% endfor %}
+
 {% if lesson_rows %}
-<h2 class="section-title">Lernumgebungen</h2>
+<h2 class="section-title">{% if projects %}Weitere Lernumgebungen{% else %}Lernumgebungen{% endif %}</h2>
 <div class="grid">
     {% for row in lesson_rows %}
-        <a class="card card-link" href="{% url 'lessons:lesson_play' row.lesson.pk %}">
-            <div class="card-link-top">
-                <strong>🧪 {{ row.lesson.title }}</strong>
-                {% if row.result and row.result.completed %}
-                    <span class="chip chip-ok">✓ erledigt</span>
-                {% elif row.result %}
-                    <span class="chip chip-info">angefangen</span>
-                {% else %}
-                    <span class="chip chip-warn">offen</span>
-                {% endif %}
-            </div>
-            <div class="muted card-link-foot">
-                {% if row.result and row.result.max_score %}
-                    {{ row.result.score|floatformat:"-1" }} / {{ row.result.max_score|floatformat:"-1" }} Punkte{% if row.result.percent is not None %} · {{ row.result.percent }} %{% endif %}
-                {% else %}
-                    Zum Öffnen tippen →
-                {% endif %}
-            </div>
-        </a>
+        {% include "students/_lesson_card.html" %}
     {% endfor %}
 </div>
 {% endif %}
 
-<h2 class="section-title">Arbeitsblätter &amp; Abgaben</h2>
+{% if rows or not projects and not lesson_rows %}
+<h2 class="section-title">{% if projects %}Weitere Arbeitsblätter &amp; Abgaben{% else %}Arbeitsblätter &amp; Abgaben{% endif %}</h2>
+{% endif %}
 {% if rows %}
     {% for row in rows %}
-        {% with assignment=row.assignment submission=row.submission %}
-        <div class="card{% if row.status == 'overdue' %} card-alert{% endif %}">
-            <div class="card-link-top">
-                <strong style="font-size:1.05rem;">{{ assignment.title }}</strong>
-                {% if row.status == 'done' %}<span class="chip chip-ok">✓ abgegeben</span>
-                {% elif row.status == 'late' %}<span class="chip chip-info">abgegeben (verspätet)</span>
-                {% elif row.status == 'overdue' %}<span class="chip chip-danger">Frist vorbei</span>
-                {% elif row.status == 'soon' %}<span class="chip chip-warn">bald fällig</span>
-                {% elif row.status == 'open' %}<span class="chip chip-warn">offen</span>
-                {% else %}<span class="chip">Material</span>{% endif %}
-            </div>
-            {% if assignment.due_date %}
-                <p class="muted" style="margin:4px 0 0;">⏰ Abgabe bis {{ assignment.due_date|date:"l, d.m.Y" }} um {{ assignment.due_date|date:"H:i" }} Uhr</p>
-            {% endif %}
-            {% if assignment.description %}
-                <p style="white-space:pre-line;margin:12px 0 0;">{{ assignment.description }}</p>
-            {% endif %}
-
-            {% with files=assignment.files.all %}
-                {% if files %}
-                    <div class="file-list">
-                        {% for file in files %}
-                            <a class="file-pill" href="{% url 'worksheets:file_download' file.pk %}">⬇️ {{ file.original_name }}</a>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-            {% endwith %}
-
-            {% if assignment.collect_submissions %}
-                <div class="submission-box">
-                    <p style="margin:0 0 8px;">
-                        <strong>Deine Abgabe</strong>
-                        {% if submission %}<span class="muted">· zuletzt {{ submission.updated_at|date:"d.m.Y H:i" }}</span>{% endif %}
-                    </p>
-                    {% if submission and submission.files.all %}
-                        <ul class="submitted-list">
-                            {% for file in submission.files.all %}
-                                <li>
-                                    <a href="{% url 'worksheets:submission_file_download' file.pk %}">📄 {{ file.original_name }}</a>
-                                    <form class="inline-form" method="post"
-                                          action="{% url 'worksheets:submission_file_delete' file.pk %}"
-                                          onsubmit="return confirm('Diese Datei aus deiner Abgabe entfernen?');">
-                                        {% csrf_token %}
-                                        <button type="submit" class="link-button">entfernen</button>
-                                    </form>
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    {% endif %}
-                    <form method="post" enctype="multipart/form-data" class="submit-form"
-                          action="{% url 'worksheets:submission_upload' assignment.pk %}">
-                        {% csrf_token %}
-                        <label class="dropzone dropzone-lg js-dropzone">
-                            <input type="file" name="files" multiple required
-                                   accept="image/*,application/pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.odt,.txt">
-                            <span class="dz-icon">📥</span>
-                            <span class="dz-title">{% if submission and submission.files.all %}Weitere Datei hierher ziehen{% else %}Datei hierher ziehen{% endif %}</span>
-                            <span class="dz-sub">oder tippen, um eine Datei oder ein Foto auszuwählen · bis 25 MB pro Datei</span>
-                            <ul class="dz-list"></ul>
-                        </label>
-                        <div class="submit-actions">
-                            <button type="submit" class="btn" disabled>Hochladen</button>
-                        </div>
-                    </form>
-                </div>
-            {% endif %}
-        </div>
-        {% endwith %}
+        {% include "students/_assignment_card.html" %}
     {% endfor %}
-{% else %}
+{% elif not projects and not lesson_rows %}
     <div class="card empty-state">
         <div class="empty-icon">📭</div>
         <p class="muted" style="margin:0;">Aktuell gibt es keine Arbeitsblätter. Schau später wieder vorbei.</p>
     </div>
 {% endif %}
-<script>
-(function(){
-    function size(n){ return n < 1048576 ? Math.max(1, Math.round(n / 1024)) + ' KB' : (n / 1048576).toFixed(1) + ' MB'; }
-    document.querySelectorAll('.js-dropzone').forEach(function(zone){
-        var input = zone.querySelector('input[type=file]');
-        var list = zone.querySelector('.dz-list');
-        var form = zone.closest('form');
-        var btn = form.querySelector('button[type=submit]');
-
-        function render(){
-            list.innerHTML = '';
-            Array.prototype.forEach.call(input.files, function(f){
-                var li = document.createElement('li');
-                li.textContent = '📄 ' + f.name;
-                var s = document.createElement('span');
-                s.className = 'dz-size'; s.textContent = size(f.size);
-                li.appendChild(s);
-                list.appendChild(li);
-            });
-            zone.classList.toggle('has-files', input.files.length > 0);
-            btn.disabled = input.files.length === 0;
-        }
-        function addFiles(files){
-            if(!window.DataTransfer){ return; }   // fallback: the native input still works
-            var dt = new DataTransfer();
-            Array.prototype.forEach.call(input.files, function(f){ dt.items.add(f); });
-            Array.prototype.forEach.call(files, function(f){ dt.items.add(f); });
-            input.files = dt.files;
-            render();
-        }
-
-        input.addEventListener('change', render);
-        ['dragenter', 'dragover'].forEach(function(ev){
-            zone.addEventListener(ev, function(e){ e.preventDefault(); zone.classList.add('drag'); });
-        });
-        zone.addEventListener('dragleave', function(e){
-            if(!zone.contains(e.relatedTarget)){ zone.classList.remove('drag'); }
-        });
-        zone.addEventListener('drop', function(e){
-            e.preventDefault(); zone.classList.remove('drag');
-            if(e.dataTransfer && e.dataTransfer.files.length){ addFiles(e.dataTransfer.files); }
-        });
-        form.addEventListener('submit', function(){
-            btn.textContent = 'Wird hochgeladen …';
-            setTimeout(function(){ btn.disabled = true; }, 0);   // after the browser has read the form
-        });
-        render();
-    });
-})();
-</script>
 {% endblock %}

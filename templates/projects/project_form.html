@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}{% if project %}Projekt bearbeiten{% else %}Neues Projekt{% endif %}{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{% if project %}{{ project.get_absolute_url }}{% else %}{% url 'projects:list' %}{% endif %}">← {% if project %}{{ project.title }}{% else %}Projekte{% endif %}</a>
+
+<div class="card card-narrow">
+    <h1>{% if project %}Projekt bearbeiten{% else %}Neues Projekt{% endif %}</h1>
+    <p class="subtitle">Danach fügst du Bausteine hinzu: Lernumgebungen, Arbeitsblätter und Arbeitsaufträge.</p>
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form.as_p }}
+        <div class="form-actions">
+            <button type="submit" class="btn">{% if project %}Speichern{% else %}Projekt anlegen{% endif %}</button>
+            <a class="btn btn-secondary" href="{% if project %}{{ project.get_absolute_url }}{% else %}{% url 'projects:list' %}{% endif %}">Abbrechen</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
