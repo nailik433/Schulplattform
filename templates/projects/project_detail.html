@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.title }}{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{% url 'projects:list' %}">← Projekte</a>
+
+<div class="page-head">
+    <div>
+        <h1>🗂️ {{ project.title }}</h1>
+        {% if project.description %}<p class="subtitle" style="white-space:pre-line;">{{ project.description }}</p>{% endif %}
+    </div>
+    <div class="actions-cell">
+        {% if items %}<a class="btn" href="{% url 'projects:apply' project.pk %}">In Klasse einsetzen</a>{% endif %}
+        <a class="btn btn-secondary" href="{% url 'projects:edit' project.pk %}">Bearbeiten</a>
+        <form class="inline-form" method="post" action="{% url 'projects:delete' project.pk %}"
+              onsubmit="return confirm('Projekt „{{ project.title|escapejs }}“ löschen? Was schon in Klassen eingesetzt ist, bleibt dort bestehen.');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Löschen</button>
+        </form>
+    </div>
+</div>
+
+<div class="section-head">
+    <h2>Bausteine</h2>
+    <div class="kind-row">
+        <a class="btn btn-secondary btn-small" href="{% url 'projects:item_create' project.pk 'lesson' %}">🧪 + Lernumgebung</a>
+        <a class="btn btn-secondary btn-small" href="{% url 'projects:item_create' project.pk 'worksheet' %}">📄 + Arbeitsblatt</a>
+        <a class="btn btn-secondary btn-small" href="{% url 'projects:item_create' project.pk 'task' %}">✍️ + Arbeitsauftrag</a>
+    </div>
+</div>
+
+{% if items %}
+    <div class="card">
+        {% for item in items %}
+            <div class="item-row">
+                <div class="item-main">
+                    <div><span class="item-icon">{{ item.icon }}</span><strong>{{ item.title }}</strong>
+                        <span class="chip" style="margin-left:6px;">{{ item.get_kind_display }}</span>
+                    </div>
+                    <div class="muted" style="margin:4px 0 0 34px;font-size:.9rem;">
+                        {% if item.kind == "lesson" %}
+                            Interaktive Seite
+                        {% elif item.kind == "worksheet" %}
+                            {{ item.material_files.all|length }} Datei{{ item.material_files.all|length|pluralize:"en" }} aus Mein Material
+                            {% if item.collect_submissions %}· mit Abgabe{% endif %}
+                        {% else %}
+                            {{ item.description|truncatechars:110 }} · fordert eine Abgabe
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="actions-cell">
+                    {% if not forloop.first %}
+                        <form class="inline-form" method="post" action="{% url 'projects:item_move' item.pk 'hoch' %}">
+                            {% csrf_token %}<button type="submit" class="btn btn-secondary btn-small" aria-label="Nach oben" title="Nach oben">↑</button>
+                        </form>
+                    {% endif %}
+                    {% if not forloop.last %}
+                        <form class="inline-form" method="post" action="{% url 'projects:item_move' item.pk 'runter' %}">
+                            {% csrf_token %}<button type="submit" class="btn btn-secondary btn-small" aria-label="Nach unten" title="Nach unten">↓</button>
+                        </form>
+                    {% endif %}
+                    <a class="btn btn-secondary btn-small" href="{% url 'projects:item_edit' item.pk %}">Bearbeiten</a>
+                    <form class="inline-form" method="post" action="{% url 'projects:item_delete' item.pk %}"
+                          onsubmit="return confirm('Baustein „{{ item.title|escapejs }}“ entfernen?');">
+                        {% csrf_token %}<button type="submit" class="btn btn-danger btn-small">Entfernen</button>
+                    </form>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="card empty-state">
+        <div class="empty-icon">🧩</div>
+        <p class="muted" style="margin:0;">Noch keine Bausteine. Füge oben eine Lernumgebung, ein Arbeitsblatt oder einen Arbeitsauftrag hinzu.</p>
+    </div>
+{% endif %}
+
+{% if used %}
+    <h2 class="section-title">Eingesetzt in</h2>
+    <div class="card">
+        {% for cp in used %}
+            <div class="item-row">
+                <div class="item-main"><a href="{{ cp.get_absolute_url }}"><strong>{{ cp.school_class.name }}</strong></a>
+                    <span class="muted"> · seit {{ cp.created_at|date:"d.m.Y" }}</span></div>
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+{% endblock %}

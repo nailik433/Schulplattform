@@ -9,6 +9,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.text import slugify
 from django.views.decorators.http import require_POST
 
+from materials.services import attach_material, build_tree
 from schools.models import ClassMembership, SchoolClass
 from schools.views import get_current_student
 
@@ -49,6 +50,13 @@ def _may_access_class(request, school_class):
     return None
 
 
+def _picker_context(request):
+    """Library tree for the "add from Mein Material" picker; keeps ticked
+    files ticked when the form is shown again after an error."""
+    selected = {int(v) for v in request.POST.getlist("material_files") if v.isdigit()}
+    return {"tree": build_tree(request.user, selected), "selected": selected}
+
+
 def _save_uploaded_files(assignment, files):
     for upload in files:
         if upload:
@@ -76,21 +84,22 @@ def _safe_name(value):
 def assignment_create(request, class_pk):
     school_class = _teacher_class_or_404(request.user, class_pk)
     if request.method == "POST":
-        form = AssignmentForm(request.POST, request.FILES)
+        form = AssignmentForm(request.POST, request.FILES, user=request.user)
         if form.is_valid():
             assignment = form.save(commit=False)
             assignment.school_class = school_class
             assignment.created_by = request.user
             assignment.save()
             _save_uploaded_files(assignment, form.cleaned_data["files"])
+            attach_material(assignment, form.cleaned_data["material_files"])
             messages.success(request, f"Arbeitsblatt „{assignment.title}“ wurde ausgeteilt.")
             return redirect(assignment.get_absolute_url())
     else:
-        form = AssignmentForm()
+        form = AssignmentForm(user=request.user)
     return render(
         request,
         "worksheets/assignment_form.html",
-        {"form": form, "school_class": school_class},
+        {"form": form, "school_class": school_class, **_picker_context(request)},
     )
 
 
@@ -128,18 +137,24 @@ def assignment_detail(request, pk):
 def assignment_edit(request, pk):
     assignment = _teacher_assignment_or_404(request.user, pk)
     if request.method == "POST":
-        form = AssignmentForm(request.POST, request.FILES, instance=assignment)
+        form = AssignmentForm(request.POST, request.FILES, instance=assignment, user=request.user)
         if form.is_valid():
             form.save()
             _save_uploaded_files(assignment, form.cleaned_data["files"])
+            attach_material(assignment, form.cleaned_data["material_files"])
             messages.success(request, "Arbeitsblatt aktualisiert.")
             return redirect(assignment.get_absolute_url())
     else:
-        form = AssignmentForm(instance=assignment)
+        form = AssignmentForm(instance=assignment, user=request.user)
     return render(
         request,
         "worksheets/assignment_form.html",
-        {"form": form, "school_class": assignment.school_class, "assignment": assignment},
+        {
+            "form": form,
+            "school_class": assignment.school_class,
+            "assignment": assignment,
+            **_picker_context(request),
+        },
     )
 
 

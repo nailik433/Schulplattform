@@ -1,0 +1,14 @@
+{# Tick files from the teacher's material library. Needs: tree, selected (set of ids). #}
+{% if tree.nodes or tree.files %}
+    <div class="picker">
+        {% include "materials/_picker_level.html" with nodes=tree.nodes files=tree.files root=True %}
+    </div>
+{% else %}
+    <div class="card" style="margin:0;">
+        <p class="muted" style="margin:0;">
+            Dein Material ist noch leer.
+            <a href="{% url 'materials:home' %}" target="_blank" rel="noopener">„Mein Material“ öffnen ↗</a>,
+            Dateien hochladen und danach hier die Seite neu laden.
+        </p>
+    </div>
+{% endif %}

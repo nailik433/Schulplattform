@@ -81,6 +81,8 @@ INSTALLED_APPS = [
     "schools",
     "worksheets",
     "lessons",
+    "materials",
+    "projects",
 ]
 
 MIDDLEWARE = [

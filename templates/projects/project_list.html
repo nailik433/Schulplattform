@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Projekte{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>🗂️ Projekte</h1>
+        <p class="subtitle">
+            Baue eine Unterrichtseinheit einmal – Lernumgebung, Arbeitsblatt, Arbeitsaufträge –
+            und setze sie in beliebig vielen Klassen ein.
+        </p>
+    </div>
+    <a class="btn" href="{% url 'projects:create' %}">+ Neues Projekt</a>
+</div>
+
+{% if projects %}
+    <div class="grid">
+        {% for p in projects %}
+            <a class="card card-link" href="{{ p.get_absolute_url }}">
+                <div class="card-link-top">
+                    <strong style="font-size:1.1rem;">{{ p.title }}</strong>
+                </div>
+                {% if p.description %}<div class="muted" style="margin-top:4px;">{{ p.description|truncatechars:90 }}</div>{% endif %}
+                <div class="class-meta">
+                    <span>🧩 {{ p.n_items }} Bausteine</span>
+                    <span>🏫 in {{ p.n_used }} Klasse{{ p.n_used|pluralize:"n" }} eingesetzt</span>
+                </div>
+            </a>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="card empty-state">
+        <div class="empty-icon">🗂️</div>
+        <p class="muted" style="margin:0 0 14px;">Noch kein Projekt. Lege dein erstes an, z. B. „Bit, Byte und Buchstaben“.</p>
+        <a class="btn" href="{% url 'projects:create' %}">+ Neues Projekt</a>
+    </div>
+{% endif %}
+{% endblock %}

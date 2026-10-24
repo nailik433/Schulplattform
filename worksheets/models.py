@@ -42,6 +42,15 @@ class Assignment(models.Model):
         blank=True,
         related_name="assignments_created",
     )
+    # Set when this assignment was created from a project template.
+    class_project = models.ForeignKey(
+        "projects.ClassProject",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assignments",
+    )
+    project_order = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

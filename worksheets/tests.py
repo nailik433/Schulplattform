@@ -361,3 +361,67 @@ class WorksheetTests(TestCase):
         self._submit_as(assignment, self.student)
         sub = Submission.objects.get(assignment=assignment, student=self.student)
         self.assertTrue(sub.is_late)
+
+
+class HalfHourDeadlineTests(TestCase):
+    def setUp(self):
+        self.teacher = make_teacher("hh@example.com")
+        self.school_class = make_class(self.teacher)
+        self.client.force_login(self.teacher)
+        self.create_url = reverse("worksheets:assignment_create", args=[self.school_class.pk])
+
+    def _post(self, **extra):
+        data = {"title": "Frist-Test", "description": "", "collect_submissions": "on"}
+        data.update(extra)
+        return self.client.post(self.create_url, data)
+
+    def test_form_offers_48_half_hour_options(self):
+        response = self.client.get(self.create_url)
+        self.assertContains(response, '<option value="00:00"')
+        self.assertContains(response, '<option value="23:30"')
+        self.assertContains(response, 'value="08:00" selected')  # sensible default
+        self.assertNotContains(response, '<option value="14:15"')
+        self.assertEqual(response.content.decode().count("<option value="), 48)
+
+    def test_half_hour_deadline_is_saved_in_local_time(self):
+        from django.utils import timezone
+
+        self._post(due_date_0="2026-11-05", due_date_1="14:30")
+        due = Assignment.objects.get(title="Frist-Test").due_date
+        local = timezone.localtime(due)
+        self.assertEqual(local.strftime("%Y-%m-%d %H:%M"), "2026-11-05 14:30")
+
+    def test_odd_minutes_are_rejected_even_if_posted_by_hand(self):
+        response = self._post(due_date_0="2026-11-05", due_date_1="14:17")
+        self.assertEqual(response.status_code, 200)  # form shown again with an error
+        self.assertContains(response, "volle oder halbe Stunde")
+        self.assertFalse(Assignment.objects.filter(title="Frist-Test").exists())
+
+    def test_no_date_means_no_deadline(self):
+        self._post(due_date_0="", due_date_1="08:00")
+        self.assertIsNone(Assignment.objects.get(title="Frist-Test").due_date)
+
+    def test_old_deadline_with_odd_minutes_is_shown_rounded(self):
+        from django.utils import timezone
+
+        assignment = Assignment.objects.create(
+            school_class=self.school_class, title="Alt",
+            due_date=timezone.make_aware(timezone.datetime(2026, 11, 5, 16, 1)),
+        )
+        response = self.client.get(reverse("worksheets:assignment_edit", args=[assignment.pk]))
+        self.assertContains(response, 'value="16:00" selected')
+        self.assertContains(response, 'value="2026-11-05"')
+
+
+class SubmissionDropzoneTests(TestCase):
+    def test_big_dropzone_only_where_submissions_are_collected(self):
+        teacher = make_teacher("dz@example.com")
+        sc = make_class(teacher)
+        student = Student.objects.create(school_class=sc)
+        Assignment.objects.create(school_class=sc, title="MitAbgabe")
+        Assignment.objects.create(school_class=sc, title="NurMaterial", collect_submissions=False)
+        self.client.get(reverse("schools:student_space", args=[student.access_code]))
+        response = self.client.get(reverse("schools:student_home"))
+        # One big drop area for the assignment that collects submissions, none for material.
+        self.assertContains(response, 'class="dropzone dropzone-lg js-dropzone"', count=1)
+        self.assertContains(response, "Datei hierher ziehen")

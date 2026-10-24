@@ -14,109 +14,33 @@
     <div class="summary-chips">
         {% if open_count %}
             <span class="chip chip-warn">{{ open_count }} offen</span>
-        {% elif rows or lesson_rows %}
+        {% elif rows or lesson_rows or projects %}
             <span class="chip chip-ok">Alles erledigt 🎉</span>
         {% endif %}
     </div>
 </div>
 
+{% for p in projects %}
+    {% include "students/_project.html" %}
+{% endfor %}
+
 {% if lesson_rows %}
-<h2 class="section-title">Lernumgebungen</h2>
+<h2 class="section-title">{% if projects %}Weitere Lernumgebungen{% else %}Lernumgebungen{% endif %}</h2>
 <div class="grid">
     {% for row in lesson_rows %}
-        <a class="card card-link" href="{% url 'lessons:lesson_play' row.lesson.pk %}">
-            <div class="card-link-top">
-                <strong>🧪 {{ row.lesson.title }}</strong>
-                {% if row.result and row.result.completed %}
-                    <span class="chip chip-ok">✓ erledigt</span>
-                {% elif row.result %}
-                    <span class="chip chip-info">angefangen</span>
-                {% else %}
-                    <span class="chip chip-warn">offen</span>
-                {% endif %}
-            </div>
-            <div class="muted card-link-foot">
-                {% if row.result and row.result.max_score %}
-                    {{ row.result.score|floatformat:"-1" }} / {{ row.result.max_score|floatformat:"-1" }} Punkte{% if row.result.percent is not None %} · {{ row.result.percent }} %{% endif %}
-                {% else %}
-                    Zum Öffnen tippen →
-                {% endif %}
-            </div>
-        </a>
+        {% include "students/_lesson_card.html" %}
     {% endfor %}
 </div>
 {% endif %}
 
-<h2 class="section-title">Arbeitsblätter &amp; Abgaben</h2>
+{% if rows or not projects and not lesson_rows %}
+<h2 class="section-title">{% if projects %}Weitere Arbeitsblätter &amp; Abgaben{% else %}Arbeitsblätter &amp; Abgaben{% endif %}</h2>
+{% endif %}
 {% if rows %}
     {% for row in rows %}
-        {% with assignment=row.assignment submission=row.submission %}
-        <div class="card{% if row.status == 'overdue' %} card-alert{% endif %}">
-            <div class="card-link-top">
-                <strong style="font-size:1.05rem;">{{ assignment.title }}</strong>
-                {% if row.status == 'done' %}<span class="chip chip-ok">✓ abgegeben</span>
-                {% elif row.status == 'late' %}<span class="chip chip-info">abgegeben (verspätet)</span>
-                {% elif row.status == 'overdue' %}<span class="chip chip-danger">Frist vorbei</span>
-                {% elif row.status == 'soon' %}<span class="chip chip-warn">bald fällig</span>
-                {% elif row.status == 'open' %}<span class="chip chip-warn">offen</span>
-                {% else %}<span class="chip">Material</span>{% endif %}
-            </div>
-            {% if assignment.due_date %}
-                <p class="muted" style="margin:4px 0 0;">⏰ Abgabe bis {{ assignment.due_date|date:"l, d.m.Y" }} um {{ assignment.due_date|date:"H:i" }} Uhr</p>
-            {% endif %}
-            {% if assignment.description %}
-                <p style="white-space:pre-line;margin:12px 0 0;">{{ assignment.description }}</p>
-            {% endif %}
-
-            {% with files=assignment.files.all %}
-                {% if files %}
-                    <div class="file-list">
-                        {% for file in files %}
-                            <a class="file-pill" href="{% url 'worksheets:file_download' file.pk %}">⬇️ {{ file.original_name }}</a>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-            {% endwith %}
-
-            {% if assignment.collect_submissions %}
-                <div class="submission-box">
-                    <p style="margin:0 0 8px;">
-                        <strong>Deine Abgabe</strong>
-                        {% if submission %}<span class="muted">· zuletzt {{ submission.updated_at|date:"d.m.Y H:i" }}</span>{% endif %}
-                    </p>
-                    {% if submission and submission.files.all %}
-                        <ul class="submitted-list">
-                            {% for file in submission.files.all %}
-                                <li>
-                                    <a href="{% url 'worksheets:submission_file_download' file.pk %}">📄 {{ file.original_name }}</a>
-                                    <form class="inline-form" method="post"
-                                          action="{% url 'worksheets:submission_file_delete' file.pk %}"
-                                          onsubmit="return confirm('Diese Datei aus deiner Abgabe entfernen?');">
-                                        {% csrf_token %}
-                                        <button type="submit" class="link-button">entfernen</button>
-                                    </form>
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    {% endif %}
-                    <form method="post" enctype="multipart/form-data" class="upload-row"
-                          action="{% url 'worksheets:submission_upload' assignment.pk %}">
-                        {% csrf_token %}
-                        <label class="btn btn-secondary upload-label">
-                            📎 Datei oder Foto wählen
-                            <input type="file" name="files" multiple required
-                                   accept="image/*,application/pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.odt,.txt"
-                                   onchange="this.closest('form').querySelector('.upload-names').textContent = Array.prototype.map.call(this.files, function(f){ return f.name; }).join(', ');">
-                        </label>
-                        <span class="upload-names muted"></span>
-                        <button type="submit" class="btn">Hochladen</button>
-                    </form>
-                </div>
-            {% endif %}
-        </div>
-        {% endwith %}
+        {% include "students/_assignment_card.html" %}
     {% endfor %}
-{% else %}
+{% elif not projects and not lesson_rows %}
     <div class="card empty-state">
         <div class="empty-icon">📭</div>
         <p class="muted" style="margin:0;">Aktuell gibt es keine Arbeitsblätter. Schau später wieder vorbei.</p>

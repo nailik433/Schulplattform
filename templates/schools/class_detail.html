@@ -27,6 +27,28 @@
 </div>
 
 <div class="section-head">
+    <h2>Projekte</h2>
+    <a class="btn" href="{% url 'projects:class_apply' school_class.pk %}">+ Projekt einsetzen</a>
+</div>
+{% if class_projects %}
+    <div class="grid" style="margin-bottom:6px;">
+        {% for cp in class_projects %}
+            <a class="card card-link" href="{{ cp.get_absolute_url }}">
+                <div class="card-link-top"><strong>🗂️ {{ cp.title }}</strong></div>
+                <div class="class-meta">
+                    <span>🧪 {{ cp.n_lessons }}</span>
+                    <span>📄 {{ cp.n_assignments }}</span>
+                    <span>seit {{ cp.created_at|date:"d.m.Y" }}</span>
+                </div>
+            </a>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="card"><p class="muted" style="margin:0;">Noch kein Projekt in dieser Klasse. Bündle Lernumgebung, Arbeitsblatt und Aufträge zu einer Einheit – unter
+        <a href="{% url 'projects:list' %}">Projekte</a> baust du sie einmal und setzt sie in mehreren Klassen ein.</p></div>
+{% endif %}
+
+<div class="section-head">
     <h2>Arbeitsblätter</h2>
     <a class="btn" href="{% url 'worksheets:assignment_create' school_class.pk %}">+ Arbeitsblatt austeilen</a>
 </div>
@@ -45,7 +67,7 @@
             <tbody>
                 {% for a in assignments %}
                     <tr>
-                        <td><a href="{{ a.get_absolute_url }}">{{ a.title }}</a></td>
+                        <td><a href="{{ a.get_absolute_url }}">{{ a.title }}</a>{% if a.class_project %} <span class="chip" style="margin-left:6px;">🗂️ {{ a.class_project.title }}</span>{% endif %}</td>
                         <td>{{ a.n_files }}</td>
                         <td>
                             {% if a.collect_submissions %}
@@ -80,7 +102,7 @@
             <tbody>
                 {% for l in lessons %}
                     <tr>
-                        <td><a href="{{ l.get_absolute_url }}">🧪 {{ l.title }}</a></td>
+                        <td><a href="{{ l.get_absolute_url }}">🧪 {{ l.title }}</a>{% if l.class_project %} <span class="chip" style="margin-left:6px;">🗂️ {{ l.class_project.title }}</span>{% endif %}</td>
                         <td>
                             {% if l.n_done >= active_count and active_count %}
                                 <span class="chip chip-ok">{{ l.n_done }}/{{ active_count }}</span>

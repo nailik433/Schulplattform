@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}{{ cp.title }}{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{{ cp.school_class.get_absolute_url }}">← {{ cp.school_class.name }}</a>
+
+<div class="page-head">
+    <div>
+        <h1>🗂️ {{ cp.title }}</h1>
+        <p class="subtitle">Projekt in {{ cp.school_class.name }} · eingesetzt am {{ cp.created_at|date:"d.m.Y" }}
+            · {{ active }} aktive Schüler/innen</p>
+        {% if cp.description %}<p class="muted" style="white-space:pre-line;">{{ cp.description }}</p>{% endif %}
+    </div>
+    <div class="actions-cell">
+        <a class="btn btn-secondary" href="{% url 'schools:class_progress' cp.school_class.pk %}">📊 Lernfortschritt</a>
+        <form class="inline-form" method="post" action="{% url 'projects:class_detach' cp.pk %}"
+              onsubmit="return confirm('Projekt auflösen? Die Bausteine bleiben einzeln in der Klasse bestehen.');">
+            {% csrf_token %}<button type="submit" class="btn btn-secondary">Auflösen</button>
+        </form>
+        <form class="inline-form" method="post" action="{% url 'projects:class_delete' cp.pk %}"
+              onsubmit="return confirm('Projekt MIT allen Bausteinen, Abgaben und Dateien endgültig löschen?');">
+            {% csrf_token %}<button type="submit" class="btn btn-danger">Samt Bausteinen löschen</button>
+        </form>
+    </div>
+</div>
+
+<h2 class="section-title">Bausteine</h2>
+{% if items %}
+    <div class="card" style="padding:0;overflow-x:auto;">
+        <table class="data">
+            <thead><tr><th>Baustein</th><th>Stand</th><th>Frist</th></tr></thead>
+            <tbody>
+                {% for row in items %}
+                    <tr>
+                        <td>
+                            {% if row.kind == "lesson" %}
+                                <a href="{{ row.obj.get_absolute_url }}">🧪 {{ row.obj.title }}</a>
+                            {% else %}
+                                <a href="{{ row.obj.get_absolute_url }}">{% if row.obj.collect_submissions and not row.obj.files.exists %}✍️{% else %}📄{% endif %} {{ row.obj.title }}</a>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if row.kind == "lesson" %}
+                                <span class="chip {% if row.done >= active and active %}chip-ok{% endif %}">{{ row.done }}/{{ active }} fertig</span>
+                            {% elif row.obj.collect_submissions %}
+                                <span class="chip {% if row.done >= active and active %}chip-ok{% endif %}">{{ row.done }}/{{ active }} abgegeben</span>
+                            {% else %}
+                                <span class="muted">Material</span>
+                            {% endif %}
+                        </td>
+                        <td>{% if row.kind == "assignment" and row.obj.due_date %}{{ row.obj.due_date|date:"d.m.Y H:i" }}{% else %}—{% endif %}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="card"><p class="muted" style="margin:0;">Dieses Projekt hat keine Bausteine (mehr).</p></div>
+{% endif %}
+{% endblock %}

@@ -22,6 +22,8 @@ urlpatterns = [
     path("konto/", include("accounts.urls")),
     path("", include("worksheets.urls")),
     path("", include("lessons.urls")),
+    path("", include("materials.urls")),
+    path("", include("projects.urls")),
     path("", include("schools.urls")),
 ]
 

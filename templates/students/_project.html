@@ -1,0 +1,24 @@
+{# A project as one bundled card with progress. Needs: p (project, items, done, total, percent, complete). #}
+<section class="project">
+    <div class="project-head">
+        <div>
+            <h2>🗂️ {{ p.project.title }}</h2>
+            {% if p.project.description %}<p class="muted" style="margin:4px 0 0;white-space:pre-line;">{{ p.project.description }}</p>{% endif %}
+        </div>
+        {% if p.total %}
+            <div class="project-progress">
+                <span class="bar{% if p.percent < 50 %} low{% endif %}"><span style="width:{{ p.percent }}%;"></span></span>
+                {% if p.complete %}<span class="chip chip-ok">✓ fertig</span>{% else %}<span>{{ p.done }} von {{ p.total }} erledigt</span>{% endif %}
+            </div>
+        {% endif %}
+    </div>
+    <div class="project-body">
+        {% for item in p.items %}
+            {% if item.kind == "lesson" %}
+                {% include "students/_lesson_card.html" with row=item.row %}
+            {% else %}
+                {% include "students/_assignment_card.html" with row=item.row %}
+            {% endif %}
+        {% endfor %}
+    </div>
+</section>
