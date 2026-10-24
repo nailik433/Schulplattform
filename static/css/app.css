@@ -153,7 +153,7 @@ h2 { font-size: 1.3rem; margin: 30px 0 14px; letter-spacing: -0.01em; font-weigh
 form p { margin: 0 0 16px; }
 label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 0.92rem; }
 input[type=text], input[type=email], input[type=password], input[type=number],
-input[type=datetime-local], textarea, select {
+input[type=datetime-local], input[type=date], textarea, select {
     width: 100%;
     padding: 13px 14px;
     border: 1px solid var(--border);
@@ -164,6 +164,12 @@ input[type=datetime-local], textarea, select {
     color: var(--ink);
     transition: border-color .15s ease, box-shadow .15s ease;
     -webkit-appearance: none; appearance: none;
+}
+select {
+    padding-right: 36px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%2386868b' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
 }
 input:focus, textarea:focus, select:focus {
     outline: none;
@@ -310,10 +316,6 @@ table.data tr:last-child td { border-bottom: none; }
 .submitted-list { list-style: none; padding: 0; margin: 0 0 10px; }
 .submitted-list li { padding: 4px 0; }
 .submitted-list .inline-form { margin-left: 8px; }
-.upload-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-.upload-label { position: relative; overflow: hidden; cursor: pointer; }
-.upload-label input[type=file] { position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
-.upload-names { font-size: 0.88rem; flex: 1; min-width: 120px; }
 
 /* ---- Empty & error states ---- */
 .empty-state { text-align: center; padding: 40px 24px; }
@@ -336,6 +338,30 @@ body.player { background: var(--surface); overflow: hidden; }
     display: block; width: 100%; border: 0; background: #fff;
     height: calc(100vh - 52px); height: calc(100dvh - 52px);
 }
+
+/* Date + time (half-hour) field */
+input.dt-date[type=date] { display: inline-block; width: calc(100% - 140px); vertical-align: top; }
+select.dt-time { display: inline-block; width: 132px; margin-left: 8px; vertical-align: top; }
+
+/* Large drop area for student submissions */
+.dropzone-lg {
+    position: relative; cursor: pointer;
+    min-height: 170px; padding: 26px 20px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    margin-bottom: 12px;
+}
+.dropzone-lg:hover { border-color: var(--primary); }
+.dropzone-lg input[type=file] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.dropzone-lg .dz-icon { font-size: 2.4rem; line-height: 1; }
+.dropzone-lg .dz-title { font-weight: 600; font-size: 1.05rem; }
+.dropzone-lg .dz-sub { color: var(--muted); font-size: 0.9rem; }
+.dropzone-lg .dz-list { margin-top: 10px; width: 100%; max-width: 420px; position: relative; pointer-events: none; }
+.dropzone-lg.has-files { border-style: solid; border-color: var(--success-ink); background: var(--success-bg); }
+.dropzone-lg.drag { border-style: solid; transform: scale(1.01); }
+.dz-list .dz-size { color: var(--muted); margin-left: 6px; }
+.submit-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.btn[disabled] { opacity: .45; cursor: not-allowed; }
+.btn[disabled]:active { transform: none; }
 
 /* ---- Progress matrix (teacher) ---- */
 .progress-table th, .progress-table td { white-space: nowrap; }
