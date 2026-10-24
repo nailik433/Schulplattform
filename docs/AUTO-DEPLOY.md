@@ -43,6 +43,26 @@ Test, ob der Login mit dem neuen Schlüssel ohne Passwort klappt:
 ssh -i ~/.ssh/hebid_deploy root@46.224.216.58 "echo ok"
 ```
 
+## Schritt 1+2 unter Windows (PowerShell)
+
+`ssh-copy-id` gibt es unter Windows nicht, und die PowerShell verschluckt das
+leere `-N ""` von `ssh-keygen`. Stattdessen:
+
+```powershell
+# Schlüssel erzeugen. Beim Passphrase-Prompt zweimal Enter drücken (leer lassen).
+ssh-keygen -t ed25519 -C "github-deploy" -f "$env:USERPROFILE\.ssh\hebid_deploy"
+
+# Öffentlichen Schlüssel auf dem Server erlauben (fragt einmal das Server-Passwort):
+$key = (Get-Content "$env:USERPROFILE\.ssh\hebid_deploy.pub" -Raw).Trim()
+ssh root@46.224.216.58 "mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo '$key' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
+
+# Test (muss ohne Passwort laufen und den Ordnernamen zeigen):
+ssh -i "$env:USERPROFILE\.ssh\hebid_deploy" root@46.224.216.58 "ls ~"
+
+# Privaten Schlüssel für das GitHub-Secret DEPLOY_SSH_KEY anzeigen:
+Get-Content "$env:USERPROFILE\.ssh\hebid_deploy" -Raw
+```
+
 ## Schritt 3: Vier Secrets in GitHub hinterlegen
 
 Im Repo auf GitHub: **Settings → Secrets and variables → Actions → New
