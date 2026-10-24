@@ -84,6 +84,30 @@ Antwort beim Anlegen: `{"id": 12, "title": "...", "teacher_url": "https://hebid.
 
 ---
 
+## Zwischenstand speichern (wichtig, weil die iPads wechseln)
+
+Die iPads wechseln zwischen den Schülern. Lernumgebungen dürfen deshalb **nichts in
+`localStorage`/`sessionStorage`** ablegen – der nächste Schüler würde den Stand des
+vorherigen sehen. Stattdessen liegt der Zwischenstand **auf dem Server, pro
+Schülerkonto**. Das geht über drei kleine Nachrichten:
+
+| Richtung | Nachricht | Bedeutung |
+|---|---|---|
+| Lernumgebung → Plattform | `{type:'lesson_state_request'}` | „Gib mir meinen gespeicherten Stand.“ |
+| Plattform → Lernumgebung | `{type:'lesson_state', state: <JSON oder null>}` | `null` heißt: noch nichts gespeichert, neu beginnen. |
+| Lernumgebung → Plattform | `{type:'lesson_state_save', state: <JSON>}` | Stand speichern (entprellt ca. 1,5 s, letzte Nachricht gewinnt, max. 64 KB, `null` löscht). |
+| Plattform → Lernumgebung | `{type:'lesson_state_saved', ok:true}` | Optionale Rückmeldung. |
+
+- Antwort nur annehmen, wenn `event.source === window.parent`.
+- Kommt nach ca. 1,5 s keine Antwort (z. B. Vorschau in neuem Tab), mit leerem Stand starten.
+- In der **Lehrer-Vorschau** wird nichts gespeichert (Antwort immer `state:null`).
+- Zusatzpunkte beim Ergebnis: `lesson_result` darf zusätzlich `extra` und `extra_max` enthalten.
+- Ein fertiges, getestetes Beispiel steht in [`docs/beispiel-zwischenstand.html`](./beispiel-zwischenstand.html);
+  der Helfer `PlatformState` daraus lässt sich direkt übernehmen.
+- Lehrkräfte können den Stand pro Schüler/in oder für alle auf der Seite der Lernumgebung zurücksetzen.
+
+---
+
 ## Standard-Ablauf (so arbeite ich)
 
 1. Wir planen eine Stunde (Bildungsplan-bezogen), ich will wenig erklären – die

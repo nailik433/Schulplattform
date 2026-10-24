@@ -28,18 +28,41 @@
             style="width:100%;height:560px;border:0;display:block;background:#fff;"></iframe>
 </div>
 
+<script>
+(function(){
+    // Teacher preview: nothing is ever stored. A lesson asking for its saved
+    // state is told "none", and save requests are ignored.
+    var frame = document.querySelector('.lesson-preview');
+    window.addEventListener('message', function(e){
+        if(!frame || e.source !== frame.contentWindow){ return; }
+        if(e.data && e.data.type === 'lesson_state_request'){
+            frame.contentWindow.postMessage({type: 'lesson_state', state: null}, '*');
+        }
+    });
+})();
+</script>
+
 <div class="section-head">
     <h2>Ergebnisse</h2>
-    {% if done_count >= roster_count and roster_count %}
-        <span class="chip chip-ok">{{ done_count }}/{{ roster_count }} fertig</span>
-    {% else %}
-        <span class="chip">{{ done_count }}/{{ roster_count }} fertig</span>
-    {% endif %}
+    <div class="actions-cell">
+        {% if done_count >= roster_count and roster_count %}
+            <span class="chip chip-ok">{{ done_count }}/{{ roster_count }} fertig</span>
+        {% else %}
+            <span class="chip">{{ done_count }}/{{ roster_count }} fertig</span>
+        {% endif %}
+        {% if state_count %}
+            <form class="inline-form" method="post" action="{% url 'lessons:state_reset_all' lesson.pk %}"
+                  onsubmit="return confirm('Gespeicherten Fortschritt von {{ state_count }} Schüler/innen zurücksetzen? Alle beginnen diese Lernumgebung dann von vorn.');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger btn-small">Fortschritt für alle zurücksetzen</button>
+            </form>
+        {% endif %}
+    </div>
 </div>
 <div class="card" style="padding:0;overflow-x:auto;">
     <table class="data">
         <thead>
-            <tr><th>Kennung</th><th>Status</th><th>Punkte</th></tr>
+            <tr><th>Kennung</th><th>Status</th><th>Punkte</th><th>Zwischenstand</th></tr>
         </thead>
         <tbody>
             {% for row in roster %}
@@ -61,10 +84,27 @@
                         {% else %}
                             <span class="muted">—</span>
                         {% endif %}
+                        {% if row.result and row.result.extra is not None %}
+                            <span class="chip chip-info" title="Zusatzpunkte" style="margin-left:6px;">+{{ row.result.extra|floatformat:"-2" }}{% if row.result.extra_max %} / {{ row.result.extra_max|floatformat:"-2" }}{% endif %} Zusatz</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if row.state_at %}
+                            <div class="actions-cell">
+                                <span class="chip">gespeichert · {{ row.state_at|date:"d.m. H:i" }}</span>
+                                <form class="inline-form" method="post" action="{% url 'lessons:state_reset' lesson.pk row.student.pk %}"
+                                      onsubmit="return confirm('Fortschritt von {{ lesson.school_class.name }}-{{ row.student.number_padded }} zurücksetzen? Die Lernumgebung beginnt dann von vorn.');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-secondary btn-small">Zurücksetzen</button>
+                                </form>
+                            </div>
+                        {% else %}
+                            <span class="muted">—</span>
+                        {% endif %}
                     </td>
                 </tr>
             {% empty %}
-                <tr><td colspan="3" class="muted">Noch keine aktiven Schüler/innen in dieser Klasse.</td></tr>
+                <tr><td colspan="4" class="muted">Noch keine aktiven Schüler/innen in dieser Klasse.</td></tr>
             {% endfor %}
         </tbody>
     </table>

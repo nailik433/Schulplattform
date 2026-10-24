@@ -21,6 +21,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from .api import ApiError, classes_data, lessons_data, teacher_for_key, upsert_lesson
+from .protocol import LESSON_PROTOCOL
 
 PROTOCOL_VERSIONS = {"2025-06-18", "2025-03-26", "2024-11-05"}
 LATEST_PROTOCOL = "2025-06-18"
@@ -30,14 +31,15 @@ SERVER_INFO = {"name": "schulplattform", "title": "Schulplattform", "version": "
 INSTRUCTIONS = (
     "Werkzeuge der Schulplattform der Lehrkraft. Lege Lernumgebungen als "
     "vollständige, in sich geschlossene HTML-Seiten an (<!DOCTYPE html>, CSS/JS "
-    "inline, iPad-tauglich, keine personenbezogenen Daten). Punkte am Ende per "
-    "window.parent.postMessage({type:'lesson_result', score, max, completed:true}, '*') "
-    "melden. Ermittle die klasse_id zuerst mit klassen_auflisten."
+    "inline, iPad-tauglich, keine personenbezogenen Daten). Ermittle die klasse_id "
+    "zuerst mit klassen_auflisten.\n\n" + LESSON_PROTOCOL
 )
 
 HTML_DESCRIPTION = (
     "Vollständige HTML-Seite (beginnt mit <!DOCTYPE html>; CSS in <style>, JS in "
-    "<script>; responsiv für iPad/Smartphone; keine Namen abfragen)."
+    "<script>; responsiv für iPad/Smartphone; keine Namen abfragen). Ergebnis und "
+    "Zwischenstand per postMessage melden/laden (lesson_result, lesson_state_request, "
+    "lesson_state_save); die genaue Beschreibung steht in den Server-Anweisungen."
 )
 
 TOOLS = [

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Beispiel: Zwischenstand</title>
+<style>
+  body { font-family: -apple-system, system-ui, sans-serif; margin: 0; padding: 24px; background: #f5f5f7; color: #1d1d1f; }
+  h1 { margin: 0 0 4px; font-size: 1.5rem; }
+  .card { background: #fff; border-radius: 16px; padding: 18px; margin-top: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); max-width: 520px; }
+  button { font: inherit; background: #0071e3; color: #fff; border: 0; border-radius: 12px; padding: 12px 18px; }
+  button:disabled { opacity: .5; }
+  #count { font-size: 2.4rem; font-weight: 700; margin: 6px 0; }
+  textarea { width: 100%; box-sizing: border-box; font: inherit; border: 1px solid #d2d2d7; border-radius: 12px; padding: 10px; min-height: 90px; }
+  #status { color: #6e6e73; font-size: .9rem; margin-top: 10px; }
+</style>
+</head>
+<body>
+<h1>Beispiel: Zwischenstand</h1>
+<p>Zählen und eine Notiz schreiben. Beim erneuten Öffnen ist alles wieder da.</p>
+
+<div class="card">
+  <div>Zähler</div>
+  <div id="count">0</div>
+  <button id="plus" disabled>+1</button>
+</div>
+<div class="card">
+  <label for="note">Notiz</label>
+  <textarea id="note" disabled></textarea>
+  <div id="status">Lade Zwischenstand …</div>
+</div>
+<div class="card">
+  <button id="done" disabled>Fertig (5 Punkte + 2 Zusatzpunkte)</button>
+</div>
+
+<script>
+// ---- Schnittstelle zur Plattform (siehe Anweisungen der Schulplattform) ----
+const PlatformState = {
+  load(callback) {
+    let done = false;
+    const finish = s => { if (!done) { done = true; callback(s); } };
+    addEventListener('message', e => {
+      if (e.source === parent && e.data && e.data.type === 'lesson_state') finish(e.data.state);
+    });
+    parent.postMessage({type: 'lesson_state_request'}, '*');
+    setTimeout(() => finish(null), 1500);
+  },
+  save(state) { parent.postMessage({type: 'lesson_state_save', state}, '*'); }
+};
+
+// ---- Die Lernumgebung selbst ----
+let count = 0;
+const $ = id => document.getElementById(id);
+const render = () => { $('count').textContent = count; };
+const snapshot = () => ({count, note: $('note').value});
+let savedTimer = null;
+const changed = () => {
+  $('status').textContent = 'Änderung wird gespeichert …';
+  PlatformState.save(snapshot());
+  // Die Rückmeldung ist optional. In der Lehrer-Vorschau wird nichts gespeichert und es kommt keine.
+  clearTimeout(savedTimer);
+  savedTimer = setTimeout(() => { $('status').textContent = 'Hier wird nichts gespeichert (Vorschau)'; }, 4000);
+};
+
+addEventListener('message', e => {
+  if (e.source === parent && e.data && e.data.type === 'lesson_state_saved')
+    { clearTimeout(savedTimer); $('status').textContent = e.data.ok ? 'Gespeichert ✓' : 'Speichern hat nicht geklappt'; }
+});
+
+PlatformState.load(state => {
+  if (state) { count = state.count || 0; $('note').value = state.note || ''; }
+  $('status').textContent = state ? 'Dein Stand wurde geladen ✓' : 'Neu begonnen';
+  render();
+  ['plus', 'note', 'done'].forEach(id => $(id).disabled = false);
+});
+
+$('plus').onclick = () => { count++; render(); changed(); };
+$('note').oninput = changed;
+$('done').onclick = () =>
+  parent.postMessage({type: 'lesson_result', score: 5, max: 5, extra: 2, extra_max: 3, completed: true}, '*');
+</script>
+</body>
+</html>

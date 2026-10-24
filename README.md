@@ -59,6 +59,10 @@ HTTPS), z. B. bei Hetzner. Live-Instanz: `https://hebid.de`.
   ([`mcp/README.md`](mcp/README.md)). Zusätzlich ein lokaler Connector für
   Claude Code / Desktop und das [`docs/COWORK-BRIEFING.md`](docs/COWORK-BRIEFING.md)
   für den reinen API-Weg.
+- **Zwischenstand in Lernumgebungen**: Antworten und Position werden pro Schüler/in
+  **auf dem Server** gespeichert (die iPads wechseln, der Browser-Speicher taugt
+  dafür nicht). Protokoll und Beispiel: [`docs/beispiel-zwischenstand.html`](docs/beispiel-zwischenstand.html);
+  Lehrkräfte können den Fortschritt je Schüler/in oder für alle zurücksetzen.
 - **Lernfortschritt pro Klasse**: Matrix Schüler × Lernumgebungen/Abgaben,
   CSV-Export für Excel.
 - **Dark Mode** folgt der Systemeinstellung.

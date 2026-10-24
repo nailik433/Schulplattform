@@ -64,6 +64,9 @@ class LessonResult(models.Model):
     )
     score = models.FloatField(null=True, blank=True)
     max_score = models.FloatField(null=True, blank=True)
+    # Optional bonus points ("Zusatzpunkte"), reported separately from the main score.
+    extra = models.FloatField(null=True, blank=True)
+    extra_max = models.FloatField(null=True, blank=True)
     completed = models.BooleanField(default=False)
     detail = models.JSONField(default=dict, blank=True)
     opened_at = models.DateTimeField(auto_now_add=True)
@@ -87,6 +90,33 @@ class LessonResult(models.Model):
         if not self.max_score:
             return None
         return round(100 * (self.score or 0) / self.max_score)
+
+
+class LessonState(models.Model):
+    """A pupil's work-in-progress in one lesson (answers, position, ...).
+
+    Stored on the server per pupil and lesson because the classroom iPads are
+    shared: the browser's own storage would show the next pupil the previous
+    one's progress. The content is opaque JSON owned by the lesson's HTML."""
+
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name="states")
+    student = models.ForeignKey(
+        "schools.Student", on_delete=models.CASCADE, related_name="lesson_states"
+    )
+    state = models.JSONField(default=dict)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Zwischenstand (Lernumgebung)"
+        verbose_name_plural = "Zwischenstände (Lernumgebungen)"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["lesson", "student"], name="unique_state_per_student_and_lesson"
+            )
+        ]
+
+    def __str__(self):
+        return f"Zwischenstand {self.student} – {self.lesson}"
 
 
 class ApiKey(models.Model):

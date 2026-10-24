@@ -142,7 +142,14 @@ def lernumgebung_anlegen(klasse_id: int, titel: str, html: str) -> str:
             <!DOCTYPE html>, CSS/JS inline, mobil/iPad-tauglich). Keine
             personenbezogenen Daten abfragen. Punkte optional am Ende per
             `window.parent.postMessage({type:'lesson_result', score, max,
-            completed:true}, '*')` melden.
+            completed:true}, '*')` melden (optional extra, extra_max für
+            Zusatzpunkte). Zwischenstand pro Schüler/in: beim Start
+            `{type:'lesson_state_request'}` senden und auf
+            `{type:'lesson_state', state}` warten (null = neu beginnen, nach
+            ca. 1,5 s ohne Antwort mit leerem Stand starten), bei Änderungen
+            `{type:'lesson_state_save', state}` senden (max. 64 KB, entprellt,
+            Rückmeldung `{type:'lesson_state_saved', ok}`). Kein localStorage:
+            die iPads werden geteilt.
 
     Gibt die ID und die Lehrer-URL zum Ansehen/Testen zurück.
     """

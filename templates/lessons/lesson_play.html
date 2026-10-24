@@ -16,35 +16,99 @@
     <span class="player-user">{{ student.label }}</span>
 </header>
 
-<iframe id="lesson-frame" class="player-frame" title="{{ lesson.title }}"
-        src="{% url 'lessons:lesson_content' lesson.pk %}"
-        sandbox="allow-scripts allow-forms allow-popups" allowfullscreen></iframe>
-
+{% comment %}
+    The pupil's saved work-in-progress is part of this page, so it is available the
+    moment the lesson asks for it. The listener below is registered BEFORE the
+    iframe starts loading, so no message from the lesson can be missed.
+{% endcomment %}
+{{ initial_state|json_script:"lesson-initial-state" }}
 <script>
 (function(){
     var reportUrl = "{% url 'lessons:lesson_report' lesson.pk %}";
+    var stateUrl = "{% url 'lessons:lesson_state' lesson.pk %}";
     var csrf = "{{ csrf_token }}";
-    var frame = document.getElementById('lesson-frame');
+    var MAX_BYTES = 65536;      // same limit as on the server
+    var DEBOUNCE_MS = 1500;     // write to the server at most once per 1.5 s
+    var current = JSON.parse(document.getElementById('lesson-initial-state').textContent);
+    var timer = null, dirty = false, chain = Promise.resolve();
+
+    function frameWindow(){
+        var f = document.getElementById('lesson-frame');
+        return f ? f.contentWindow : null;
+    }
+    // The sandboxed frame has an opaque origin, so '*' is the only possible target
+    // origin; the message still goes to exactly this one window.
+    function tell(message){
+        var w = frameWindow();
+        if(w){ w.postMessage(message, '*'); }
+    }
+    function post(url, body, keepalive){
+        return fetch(url, {
+            method: 'POST',
+            credentials: 'same-origin',
+            keepalive: !!keepalive,
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf},
+            body: JSON.stringify(body)
+        });
+    }
+
+    // Send the newest state now. Requests run strictly one after another, so an
+    // older state can never overwrite a newer one on the server.
+    function flush(keepalive){
+        clearTimeout(timer); timer = null;
+        if(!dirty){ return; }
+        dirty = false;
+        var snapshot = current;
+        chain = chain.then(function(){
+            return post(stateUrl, {state: snapshot}, keepalive)
+                .then(function(r){ tell({type: 'lesson_state_saved', ok: r.ok}); })
+                .catch(function(){ tell({type: 'lesson_state_saved', ok: false}); });
+        });
+    }
+    function save(state){
+        if(state === undefined){ return; }
+        var size = new Blob([JSON.stringify(state)]).size;
+        if(size > MAX_BYTES){
+            tell({type: 'lesson_state_saved', ok: false, error: 'too_large'});
+            return;
+        }
+        current = state;            // later requests get the newest state, even unsent
+        dirty = true;
+        clearTimeout(timer);
+        timer = setTimeout(flush, DEBOUNCE_MS);
+    }
+    // Do not lose the last change when the tab is closed or the iPad is put away.
+    document.addEventListener('visibilitychange', function(){
+        if(document.visibilityState === 'hidden'){ flush(true); }
+    });
+    window.addEventListener('pagehide', function(){ flush(true); });
+
     window.addEventListener('message', function(e){
-        // Only accept results from our own sandboxed frame.
-        if(e.source !== frame.contentWindow) return;
+        // Only accept messages from our own sandboxed frame.
+        if(e.source !== frameWindow()){ return; }
         var d = e.data;
-        if(!d || d.type !== 'lesson_result') return;
-        try {
-            fetch(reportUrl, {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf},
-                body: JSON.stringify({
-                    score: d.score,
-                    max: (d.max !== undefined ? d.max : d.max_score),
-                    completed: d.completed !== false,
-                    detail: d.detail || {}
-                })
-            });
-        } catch (err) { /* ignore */ }
+        if(!d || typeof d !== 'object'){ return; }
+
+        if(d.type === 'lesson_state_request'){
+            tell({type: 'lesson_state', state: current});
+        } else if(d.type === 'lesson_state_save'){
+            save(d.state);
+        } else if(d.type === 'lesson_result'){
+            post(reportUrl, {
+                score: d.score,
+                max: (d.max !== undefined ? d.max : d.max_score),
+                extra: d.extra,
+                extra_max: d.extra_max,
+                completed: d.completed !== false,
+                detail: d.detail || {}
+            }).catch(function(){ /* ignore */ });
+        }
     });
 })();
 </script>
+
+<iframe id="lesson-frame" class="player-frame" title="{{ lesson.title }}"
+        src="{% url 'lessons:lesson_content' lesson.pk %}"
+        sandbox="allow-scripts allow-forms allow-popups" allowfullscreen></iframe>
 </body>
 </html>

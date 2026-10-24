@@ -42,7 +42,7 @@
 <div class="card">
     <h2 style="margin-top:0;">2. Prompt für einen normalen Claude-Chat</h2>
     <p class="muted">Ohne Connector: Prompt kopieren, [BESCHREIBUNG] ersetzen, HTML-Ausgabe unter „+ Lernumgebung" einfügen.</p>
-    <textarea id="ki-prompt" readonly rows="14"
+    <textarea id="ki-prompt" readonly rows="18"
         style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:0.85rem;">Baue eine interaktive, animierte Lernumgebung als EINE vollständige, in sich geschlossene HTML-Datei.
 
 Vorgaben:
@@ -50,8 +50,8 @@ Vorgaben:
 - Optimiert fürs iPad: responsiv, große Tap-Ziele, Touch-freundlich, elegantes, ruhiges Design.
 - Inhalt: Erklärungen + Animationen (CSS/SVG/Canvas) + interaktive Aufgaben (z. B. Single/Multiple Choice, Zuordnung, Schieberegler-Experimente) mit direktem Feedback.
 - Keine echten Namen oder personenbezogenen Daten abfragen.
-- Wenn der/die Schüler/in fertig ist bzw. Punkte erreicht hat, melde das Ergebnis an die Plattform:
-    window.parent.postMessage({type:'lesson_result', score: ERREICHTE_PUNKTE, max: MAX_PUNKTE, completed:true}, '*');
+- Nutze diese Schnittstelle zur Plattform:
+{{ lesson_protocol }}
 - Gib am Ende NUR den vollständigen HTML-Code aus (ohne Erklärtext drumherum).
 
 Thema / Beschreibung:

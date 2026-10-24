@@ -1,9 +1,11 @@
 import json
+import math
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.cache import never_cache
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.http import require_POST
 
@@ -11,7 +13,8 @@ from schools.models import ClassMembership, SchoolClass
 from schools.views import get_current_student
 
 from .forms import LessonForm
-from .models import ApiKey, Lesson, LessonResult
+from .models import ApiKey, Lesson, LessonResult, LessonState
+from .protocol import LESSON_PROTOCOL
 
 
 # --------------------------------------------------------------------------
@@ -40,6 +43,31 @@ def _teacher_lesson_or_404(user, pk):
 # logged-in user. Our own pages embed it in an iframe with the same sandbox
 # attribute; ``xframe_options_sameorigin`` lets exactly those pages do that.
 LESSON_CSP = "sandbox allow-scripts allow-forms allow-popups"
+
+
+# Largest accepted work-in-progress, measured on the compact JSON in bytes.
+STATE_MAX_BYTES = 64 * 1024
+
+
+def _reject_constant(name):
+    raise ValueError(f"unzulässiger JSON-Wert: {name}")
+
+
+def _loads_strict(raw):
+    """``json.loads`` that refuses NaN/Infinity (PostgreSQL's jsonb would
+    fail on them) and absurdly deep nesting, instead of crashing."""
+    try:
+        return json.loads(raw, parse_constant=_reject_constant)
+    except (ValueError, RecursionError):
+        raise ValueError("ungültiges JSON")
+
+
+def _number(value):
+    """A finite number as float, otherwise ``None`` (bools are not numbers)."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    value = float(value)
+    return value if math.isfinite(value) else None
 
 
 def _lesson_html_response(html):
@@ -98,9 +126,16 @@ def lesson_detail(request, pk):
         r.student_id: r
         for r in lesson.results.select_related("student")
     }
+    states = dict(lesson.states.values_list("student_id", "updated_at"))
     roster = []
     for student in lesson.school_class.students.filter(is_active=True):
-        roster.append({"student": student, "result": results.get(student.id)})
+        roster.append(
+            {
+                "student": student,
+                "result": results.get(student.id),
+                "state_at": states.get(student.id),
+            }
+        )
     done = sum(1 for row in roster if row["result"] and row["result"].completed)
     return render(
         request,
@@ -110,6 +145,7 @@ def lesson_detail(request, pk):
             "roster": roster,
             "done_count": done,
             "roster_count": len(roster),
+            "state_count": sum(1 for row in roster if row["state_at"]),
         },
     )
 
@@ -134,6 +170,29 @@ def lesson_delete(request, pk):
     return redirect(school_class.get_absolute_url())
 
 
+@login_required
+@require_POST
+def state_reset(request, pk, student_pk):
+    """Delete one pupil's saved work-in-progress so they start the lesson over."""
+    lesson = _teacher_lesson_or_404(request.user, pk)
+    student = get_object_or_404(lesson.school_class.students, pk=student_pk)
+    deleted, _ = LessonState.objects.filter(lesson=lesson, student=student).delete()
+    if deleted:
+        messages.success(request, f"Fortschritt von {student.seat_label or student.label} zurückgesetzt.")
+    else:
+        messages.info(request, "Es war kein Zwischenstand gespeichert.")
+    return redirect(lesson.get_absolute_url())
+
+
+@login_required
+@require_POST
+def state_reset_all(request, pk):
+    lesson = _teacher_lesson_or_404(request.user, pk)
+    deleted, _ = LessonState.objects.filter(lesson=lesson).delete()
+    messages.success(request, f"Fortschritt für {deleted} Schüler/innen zurückgesetzt.")
+    return redirect(lesson.get_absolute_url())
+
+
 # --------------------------------------------------------------------------
 # Student views
 # --------------------------------------------------------------------------
@@ -148,15 +207,28 @@ def _student_lesson_or_404(request, pk):
     return student, lesson
 
 
+@never_cache  # the page embeds the pupil's saved state: never serve a stale copy
 def lesson_play(request, pk):
-    """Student-facing page: shows the lesson's HTML in a sandboxed iframe."""
+    """Student-facing page: shows the lesson's HTML in a sandboxed iframe.
+
+    The saved work-in-progress is delivered inside the page itself, so it is
+    there before the lesson's own script can ask for it (no loading race)."""
     student, lesson = _student_lesson_or_404(request, pk)
     if student is None:
         return redirect("schools:student_login")
     if lesson is None:
         raise Http404
     LessonResult.objects.get_or_create(lesson=lesson, student=student)
-    return render(request, "lessons/lesson_play.html", {"lesson": lesson, "student": student})
+    saved = LessonState.objects.filter(lesson=lesson, student=student).first()
+    return render(
+        request,
+        "lessons/lesson_play.html",
+        {
+            "lesson": lesson,
+            "student": student,
+            "initial_state": saved.state if saved else None,
+        },
+    )
 
 
 @xframe_options_sameorigin
@@ -178,20 +250,66 @@ def lesson_report(request, pk):
     if student is None or lesson is None:
         raise Http404
     try:
-        payload = json.loads(request.body or "{}")
+        payload = _loads_strict(request.body or "{}")
     except ValueError:
         payload = {}
+    if not isinstance(payload, dict):
+        payload = {}
     result, _ = LessonResult.objects.get_or_create(lesson=lesson, student=student)
-    score = payload.get("score")
-    max_score = payload.get("max") if "max" in payload else payload.get("max_score")
-    if isinstance(score, (int, float)):
-        result.score = float(score)
-    if isinstance(max_score, (int, float)):
-        result.max_score = float(max_score)
+    score = _number(payload.get("score"))
+    max_score = _number(payload.get("max") if "max" in payload else payload.get("max_score"))
+    if score is not None:
+        result.score = score
+    if max_score is not None:
+        result.max_score = max_score
+    extra, extra_max = _number(payload.get("extra")), _number(payload.get("extra_max"))
+    if extra is not None:
+        result.extra = extra
+    if extra_max is not None:
+        result.extra_max = extra_max
     result.completed = bool(payload.get("completed", True))
     if isinstance(payload.get("detail"), dict):
         result.detail = payload["detail"]
     result.save()
+    return JsonResponse({"ok": True})
+
+
+@require_POST
+def lesson_state_save(request, pk):
+    """Store (or clear) the logged-in pupil's work-in-progress for this lesson.
+
+    Only the pupil's own state can be written: the pupil comes from the
+    session, never from the request. Body: ``{"state": <JSON>}``, at most
+    64 KB; ``{"state": null}`` deletes the saved state. Last write wins."""
+    student, lesson = _student_lesson_or_404(request, pk)
+    if student is None or lesson is None:
+        raise Http404
+
+    try:
+        declared = int(request.META.get("CONTENT_LENGTH") or 0)
+    except ValueError:
+        declared = 0
+    if declared > STATE_MAX_BYTES + 1024:  # envelope overhead, checked again below
+        return JsonResponse({"ok": False, "error": "too_large"}, status=413)
+
+    try:
+        payload = _loads_strict(request.body or "")
+    except ValueError:
+        return JsonResponse({"ok": False, "error": "invalid_json"}, status=400)
+    if not isinstance(payload, dict) or "state" not in payload:
+        return JsonResponse({"ok": False, "error": "state_missing"}, status=400)
+
+    state = payload["state"]
+    if state is None:
+        LessonState.objects.filter(lesson=lesson, student=student).delete()
+        return JsonResponse({"ok": True})
+
+    size = len(json.dumps(state, separators=(",", ":"), ensure_ascii=False).encode("utf-8"))
+    if size > STATE_MAX_BYTES:
+        return JsonResponse({"ok": False, "error": "too_large"}, status=413)
+    LessonState.objects.update_or_create(
+        lesson=lesson, student=student, defaults={"state": state}
+    )
     return JsonResponse({"ok": True})
 
 
@@ -211,4 +329,8 @@ def api_key_page(request):
     if key is None:
         key = ApiKey.objects.create(teacher=request.user)
     base = request.build_absolute_uri("/").rstrip("/")
-    return render(request, "lessons/api_key.html", {"api_key": key, "base_url": base})
+    return render(
+        request,
+        "lessons/api_key.html",
+        {"api_key": key, "base_url": base, "lesson_protocol": LESSON_PROTOCOL},
+    )
