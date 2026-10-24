@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Meine Klassen{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>Meine Klassen</h1>
+        {% if school %}
+            <p class="subtitle">{{ school.name }}</p>
+        {% else %}
+            <p class="subtitle">Dir ist noch keine Schule zugeordnet.</p>
+        {% endif %}
+    </div>
+    <div class="actions-cell">
+        <a class="btn btn-secondary" href="{% url 'lessons:api_key' %}">🧪 KI &amp; API</a>
+        {% if school %}
+            <a class="btn" href="{% url 'schools:class_create' %}">+ Klasse anlegen</a>
+        {% endif %}
+    </div>
+</div>
+
+{% if not school %}
+    <div class="card">
+        <p style="margin:0;">
+            Deinem Konto ist noch keine Schule zugeordnet. Bitte wende dich an
+            die Administration der Plattform.
+        </p>
+    </div>
+{% endif %}
+
+{% if owned_classes %}
+    <div class="grid">
+        {% for c in owned_classes %}
+            {% include "schools/_class_card.html" with c=c %}
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="card empty-state">
+        <div class="empty-icon">🏫</div>
+        <p class="muted" style="margin:0;">
+            Noch keine eigenen Klassen.{% if school %} Lege oben rechts deine erste Klasse an.{% endif %}
+        </p>
+    </div>
+{% endif %}
+
+{% if shared_classes %}
+    <h2 class="section-title">Mit mir geteilte Klassen</h2>
+    <div class="grid">
+        {% for c in shared_classes %}
+            {% include "schools/_class_card.html" with c=c shared=True %}
+        {% endfor %}
+    </div>
+{% endif %}
+{% endblock %}

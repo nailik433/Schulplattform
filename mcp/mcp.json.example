@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "schulplattform": {
+      "command": "python3",
+      "args": ["mcp/schulplattform_mcp.py"],
+      "env": {
+        "SCHULPLATTFORM_URL": "https://hebid.de",
+        "SCHULPLATTFORM_API_KEY": "${SCHULPLATTFORM_API_KEY}"
+      }
+    }
+  }
+}

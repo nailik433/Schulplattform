@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Lehrer-Login{% endblock %}
+
+{% block content %}
+<div class="auth-wrap">
+    <div class="auth-card" style="text-align:left;">
+        <h1 style="text-align:center;">Lehrer-Login</h1>
+        <p class="subtitle" style="text-align:center;">Melde dich mit E-Mail und Passwort an.</p>
+        <form method="post" novalidate>
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+                <ul class="errorlist">
+                    {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+                </ul>
+            {% endif %}
+            <p>
+                <label for="{{ form.username.id_for_label }}">E-Mail-Adresse</label>
+                <input type="email" name="username" id="{{ form.username.id_for_label }}"
+                       value="{{ form.username.value|default:'' }}" autocomplete="email"
+                       autocapitalize="none" required autofocus>
+            </p>
+            <p>
+                <label for="{{ form.password.id_for_label }}">Passwort</label>
+                <input type="password" name="password" id="{{ form.password.id_for_label }}"
+                       autocomplete="current-password" required>
+            </p>
+            <div style="margin-top:8px;">
+                <button type="submit" class="btn btn-block">Anmelden</button>
+            </div>
+        </form>
+        <p class="auth-foot" style="text-align:center;">
+            <a href="{% url 'accounts:password_reset' %}">Passwort vergessen?</a>
+        </p>
+        <p class="muted" style="text-align:center;margin-top:6px;">
+            Noch kein Konto? <a href="{% url 'accounts:access_request' %}">Zugang anfragen</a>
+        </p>
+        <p class="auth-foot" style="text-align:center;">
+            <a href="{% url 'home' %}">← Zum Schüler-Login</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

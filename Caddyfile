@@ -1,0 +1,27 @@
+# Caddy fetches and renews a free Let's Encrypt certificate automatically.
+{
+	email {$LETSENCRYPT_EMAIL}
+}
+
+{$DOMAIN} {
+	encode gzip zstd
+
+	# Uploads are limited to 25 MB per file in the app; cap the whole request
+	# here so an oversized upload is rejected before it can fill the disk.
+	request_body {
+		max_size 60MB
+	}
+
+	# Serve collected static files (CSS/JS) straight from disk.
+	handle_path /static/* {
+		root * /srv/static
+		file_server
+	}
+
+	# Uploaded files (worksheets, later submissions) are NOT served directly:
+	# they contain user content and are delivered only through Django's
+	# access-checked download view. So everything else goes to the app.
+	handle {
+		reverse_proxy web:8000
+	}
+}

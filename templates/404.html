@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Seite nicht gefunden{% endblock %}
+
+{% block content %}
+<div class="card card-narrow error-page">
+    <div class="code">404</div>
+    <h1>Seite nicht gefunden</h1>
+    <p class="muted">Der Link ist ungültig, die Seite wurde entfernt – oder du hast keinen Zugriff darauf.</p>
+    <a class="btn" href="{% url 'home' %}">Zur Startseite</a>
+</div>
+{% endblock %}

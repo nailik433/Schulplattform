@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block title %}{{ school_class }}{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{% url 'schools:dashboard' %}">← Meine Klassen</a>
+
+<div class="page-head">
+    <div>
+        <h1>{{ school_class.name }}</h1>
+        <p class="subtitle">
+            {{ school_class.school.name }}{% if school_class.subject %} &middot; {{ school_class.subject }}{% endif %}
+            &middot; {{ active_count }} aktive Schüler/innen
+        </p>
+    </div>
+    <div class="actions-cell">
+        {% if students %}
+            <a class="btn btn-secondary" href="{% url 'schools:class_progress' school_class.pk %}">📊 Lernfortschritt</a>
+            <a class="btn" href="{% url 'schools:class_qr_document' school_class.pk %}" target="_blank">
+                🖨️ QR-Dokument drucken
+            </a>
+        {% endif %}
+        {% if is_owner %}
+            <a class="btn btn-danger" href="{% url 'schools:class_delete' school_class.pk %}">Klasse löschen</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="section-head">
+    <h2>Arbeitsblätter</h2>
+    <a class="btn" href="{% url 'worksheets:assignment_create' school_class.pk %}">+ Arbeitsblatt austeilen</a>
+</div>
+{% if assignments %}
+    <div class="card" style="padding:0;overflow-x:auto;">
+        <table class="data">
+            <thead>
+                <tr>
+                    <th>Titel</th>
+                    <th>Dateien</th>
+                    <th>Abgaben</th>
+                    <th>Abgabe bis</th>
+                    <th>Erstellt</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in assignments %}
+                    <tr>
+                        <td><a href="{{ a.get_absolute_url }}">{{ a.title }}</a></td>
+                        <td>{{ a.n_files }}</td>
+                        <td>
+                            {% if a.collect_submissions %}
+                                {% if a.n_submissions >= active_count and active_count %}
+                                    <span class="chip chip-ok">{{ a.n_submissions }}/{{ active_count }}</span>
+                                {% else %}
+                                    <span class="chip">{{ a.n_submissions }}/{{ active_count }}</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>{% if a.due_date %}{{ a.due_date|date:"d.m.Y H:i" }}{% else %}—{% endif %}</td>
+                        <td class="muted">{{ a.created_at|date:"d.m.Y" }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="card"><p class="muted" style="margin:0;">Noch keine Arbeitsblätter ausgeteilt.</p></div>
+{% endif %}
+
+<div class="section-head">
+    <h2>Lernumgebungen</h2>
+    <a class="btn" href="{% url 'lessons:lesson_create' school_class.pk %}">+ Lernumgebung</a>
+</div>
+{% if lessons %}
+    <div class="card" style="padding:0;overflow-x:auto;">
+        <table class="data">
+            <thead><tr><th>Titel</th><th>Fertig</th><th>Erstellt</th></tr></thead>
+            <tbody>
+                {% for l in lessons %}
+                    <tr>
+                        <td><a href="{{ l.get_absolute_url }}">🧪 {{ l.title }}</a></td>
+                        <td>
+                            {% if l.n_done >= active_count and active_count %}
+                                <span class="chip chip-ok">{{ l.n_done }}/{{ active_count }}</span>
+                            {% else %}
+                                <span class="chip">{{ l.n_done }}/{{ active_count }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="muted">{{ l.created_at|date:"d.m.Y" }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="card"><p class="muted" style="margin:0;">Noch keine Lernumgebungen.
+        <a href="{% url 'lessons:api_key' %}">KI &amp; API</a> ansehen, um welche von Claude bauen zu lassen.</p></div>
+{% endif %}
+
+<h2 class="section-title">Schüler/innen &amp; Tokens</h2>
+{% if students %}
+    <form method="post">
+        {% csrf_token %}
+        <div class="card" style="padding:0;overflow-x:auto;">
+            <table class="data">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" onclick="spToggleAll(this)" title="Alle auswählen"></th>
+                        <th>Kennung</th>
+                        <th>Token</th>
+                        <th>Status</th>
+                        <th>Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                        <tr>
+                            <td><input type="checkbox" name="student_ids" value="{{ student.pk }}"></td>
+                            <td>{{ school_class.name }}-{{ student.number_padded }}</td>
+                            <td><span class="code">{{ student.access_code }}</span></td>
+                            <td>
+                                {% if student.is_active %}
+                                    <span class="badge">aktiv</span>
+                                {% else %}
+                                    <span class="badge inactive">deaktiviert</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="actions-cell">
+                                    <button type="submit" class="btn btn-secondary btn-small"
+                                            formaction="{% url 'schools:student_regenerate_code' school_class.pk student.pk %}">Neuer Token</button>
+                                    <button type="button" class="btn btn-secondary btn-small"
+                                            onclick="spSetToken('{% url 'schools:student_set_token' school_class.pk student.pk %}', '{{ student.access_code }}')">Token ändern</button>
+                                    <button type="submit" class="btn btn-secondary btn-small"
+                                            formaction="{% url 'schools:student_toggle_active' school_class.pk student.pk %}">
+                                        {% if student.is_active %}Deaktivieren{% else %}Aktivieren{% endif %}
+                                    </button>
+                                    <button type="submit" class="btn btn-danger btn-small"
+                                            formaction="{% url 'schools:student_delete' school_class.pk student.pk %}"
+                                            onclick="return confirm('Diesen Platz wirklich entfernen?');">Entfernen</button>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="form-actions" style="margin-top:12px;">
+            <button type="submit" class="btn btn-danger"
+                    formaction="{% url 'schools:student_bulk_delete' school_class.pk %}"
+                    onclick="return spConfirmBulk();">Ausgewählte löschen</button>
+        </div>
+    </form>
+{% else %}
+    <div class="card">
+        <p class="muted">Noch keine Schüler/innen in dieser Klasse. Füge unten welche hinzu.</p>
+    </div>
+{% endif %}
+
+<div class="card" style="margin-top:14px;">
+    <form method="post" action="{% url 'schools:student_add_count' school_class.pk %}"
+          style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+        {% csrf_token %}
+        <div>
+            <label for="{{ count_form.count.id_for_label }}">Weitere Schüler/innen hinzufügen (Anzahl)</label>
+            {{ count_form.count }}
+        </div>
+        <button type="submit" class="btn">Hinzufügen</button>
+    </form>
+    <p class="muted" style="margin:8px 0 0;">
+        Es werden anonyme Plätze mit je einem Token erzeugt (z. B. {{ school_class.name }}-001).
+    </p>
+</div>
+
+<details class="card" style="margin-top:14px;">
+    <summary style="cursor:pointer;font-weight:600;">Vorhandene Tokens importieren (z. B. Fobizz-Liste)</summary>
+    <form method="post" action="{% url 'schools:student_import' school_class.pk %}" style="margin-top:12px;" novalidate>
+        {% csrf_token %}
+        <p style="margin:0 0 6px;">
+            Zwei Excel-Spalten (Bezeichnung + Token) einfach hierher kopieren – eine Zeile pro Schüler/in.
+            Eine Spalte (nur Token) geht auch.
+        </p>
+        {{ import_form.data }}
+        <div style="margin-top:10px;">
+            <button type="submit" class="btn">Importieren</button>
+        </div>
+    </form>
+</details>
+
+{% if students %}
+    <p class="muted" style="margin-top:12px;">
+        Schüler/innen melden sich mit ihrem Token unter
+        <a href="{% url 'schools:student_login' %}">{{ request.scheme }}://{{ request.get_host }}{% url 'schools:student_login' %}</a>
+        an – oder scannen einfach den QR-Code aus dem Druck-Dokument.
+    </p>
+{% endif %}
+
+<h2 class="section-title">Kolleg/innen</h2>
+{% if is_owner %}
+    <div class="card">
+        <p class="muted" style="margin-top:0;">
+            Gib die Klasse an Kolleg/innen frei. Sie können mit dieser Klasse
+            arbeiten (Arbeitsblätter austeilen, Abgaben einsammeln), sehen aber
+            keine deiner anderen Klassen.
+        </p>
+
+        {% if collaborators %}
+            <table class="data" style="margin-bottom:14px;">
+                <tbody>
+                    {% for m in collaborators %}
+                        <tr>
+                            <td>{{ m.teacher.get_full_name|default:m.teacher.email }}</td>
+                            <td class="muted">{{ m.teacher.email }}</td>
+                            <td style="text-align:right;">
+                                <form class="inline-form" method="post"
+                                      action="{% url 'schools:class_share_remove' school_class.pk m.teacher.pk %}"
+                                      onsubmit="return confirm('Freigabe für {{ m.teacher.email|escapejs }} entfernen?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger btn-small">Entfernen</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="muted">Noch niemandem freigegeben.</p>
+        {% endif %}
+
+        <form method="post" action="{% url 'schools:class_share_add' school_class.pk %}"
+              style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+            {% csrf_token %}
+            <div style="flex:1;min-width:220px;">
+                {{ share_form.email.label_tag }}
+                {{ share_form.email }}
+            </div>
+            <button type="submit" class="btn">Freigeben</button>
+        </form>
+    </div>
+{% else %}
+    <div class="card">
+        <p class="muted" style="margin:0;">
+            Diese Klasse wurde dir freigegeben{% if owner %} von
+            {{ owner.get_full_name|default:owner.email }}{% endif %}. Du kannst
+            mitarbeiten, aber die Freigabe verwaltet der/die Inhaber/in.
+        </p>
+    </div>
+{% endif %}
+
+<script>
+function spToggleAll(cb){
+    document.querySelectorAll('input[name=student_ids]').forEach(function(x){ x.checked = cb.checked; });
+}
+function spConfirmBulk(){
+    var n = document.querySelectorAll('input[name=student_ids]:checked').length;
+    if(n === 0){ alert('Bitte zuerst Schüler/innen auswählen (Häkchen setzen).'); return false; }
+    return confirm(n + ' Schüler/in(nen) wirklich löschen?');
+}
+function spSetToken(url, current){
+    var t = prompt('Neuen Token eingeben (3–16 Kleinbuchstaben/Ziffern):', current);
+    if(t === null) return;
+    var csrf = document.querySelector('input[name=csrfmiddlewaretoken]');
+    var f = document.createElement('form');
+    f.method = 'post'; f.action = url;
+    f.innerHTML = '<input type="hidden" name="csrfmiddlewaretoken" value="' + (csrf ? csrf.value : '') + '">'
+                + '<input type="hidden" name="token">';
+    f.querySelector('input[name=token]').value = t;
+    document.body.appendChild(f);
+    f.submit();
+}
+</script>
+{% endblock %}

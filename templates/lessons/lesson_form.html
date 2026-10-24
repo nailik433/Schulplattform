@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}{% if lesson %}Lernumgebung bearbeiten{% else %}Lernumgebung erstellen{% endif %}{% endblock %}
+
+{% block content %}
+<p class="muted"><a href="{% url 'schools:class_detail' school_class.pk %}">← {{ school_class.name }}</a></p>
+
+<div class="card">
+    <h1>{% if lesson %}Lernumgebung bearbeiten{% else %}Lernumgebung erstellen{% endif %}</h1>
+    <p class="subtitle">für {{ school_class.name }}{% if school_class.subject %} · {{ school_class.subject }}{% endif %}</p>
+
+    <p class="muted">
+        Füge hier die fertige <strong>HTML-Seite</strong> ein (z. B. von Claude erzeugt) –
+        eine komplette, in sich geschlossene Datei mit eigenem CSS/JS und Animationen.
+        Den passenden Claude-Prompt findest du unter
+        <a href="{% url 'lessons:api_key' %}">API &amp; KI-Prompt</a>.
+    </p>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        <p>
+            {{ form.title.label_tag }}
+            {{ form.title }}
+            {{ form.title.errors }}
+        </p>
+        <p>
+            {{ form.html.label_tag }}
+            <span id="html-drop" class="dropzone" style="padding:10px;margin-bottom:8px;">
+                <span class="dz-hint" style="margin:0;">📄 .html-Datei hierher ziehen (füllt das Feld) – oder unten einfügen</span>
+            </span>
+            {{ form.html }}
+            {{ form.html.errors }}
+        </p>
+        <div class="form-actions">
+            <button type="submit" class="btn">{% if lesson %}Speichern{% else %}Erstellen{% endif %}</button>
+            <a class="btn btn-secondary" href="{% url 'schools:class_detail' school_class.pk %}">Abbrechen</a>
+        </div>
+    </form>
+</div>
+
+<script>
+(function(){
+    var dz = document.getElementById('html-drop');
+    var ta = document.getElementById('{{ form.html.id_for_label }}');
+    if(!dz || !ta) return;
+    ['dragenter','dragover'].forEach(function(ev){
+        dz.addEventListener(ev, function(e){ e.preventDefault(); dz.classList.add('drag'); });
+    });
+    dz.addEventListener('dragleave', function(e){ if(e.target===dz) dz.classList.remove('drag'); });
+    dz.addEventListener('drop', function(e){
+        e.preventDefault(); dz.classList.remove('drag');
+        var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        if(!f) return;
+        var r = new FileReader();
+        r.onload = function(){ ta.value = r.result; };
+        r.readAsText(f);
+    });
+})();
+</script>
+{% endblock %}

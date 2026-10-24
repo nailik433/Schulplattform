@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}{{ assignment.title }}{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{% url 'schools:class_detail' assignment.school_class.pk %}">← {{ assignment.school_class.name }}</a>
+
+<div class="page-head">
+    <h1>{{ assignment.title }}</h1>
+    <div class="actions-cell">
+        <a class="btn btn-secondary btn-small" href="{% url 'worksheets:assignment_edit' assignment.pk %}">Bearbeiten</a>
+        <form class="inline-form" method="post"
+              action="{% url 'worksheets:assignment_delete' assignment.pk %}"
+              onsubmit="return confirm('Arbeitsblatt „{{ assignment.title|escapejs }}“ wirklich löschen?');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger btn-small">Löschen</button>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    {% if assignment.due_date %}
+        <p><span class="badge">Abgabe bis {{ assignment.due_date|date:"d.m.Y H:i" }}</span></p>
+    {% endif %}
+    {% if assignment.description %}
+        <p style="white-space:pre-line;">{{ assignment.description }}</p>
+    {% else %}
+        <p class="muted">Keine Beschreibung.</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2 style="margin-top:0;">Dateien</h2>
+    {% if files %}
+        <ul>
+            {% for file in files %}
+                <li>
+                    <a href="{% url 'worksheets:file_download' file.pk %}">⬇️ {{ file.original_name }}</a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="muted">Keine Dateien angehängt.</p>
+    {% endif %}
+</div>
+
+{% if assignment.collect_submissions %}
+    <div class="section-head">
+        <h2>Abgaben <span class="muted" style="font-weight:400;">({{ submitted_count }}/{{ roster_count }})</span></h2>
+        {% if submitted_count %}
+            <a class="btn btn-small" href="{% url 'worksheets:submissions_zip' assignment.pk %}">⬇️ Alle Abgaben (ZIP)</a>
+        {% endif %}
+    </div>
+    <p class="muted" style="margin-top:6px;">
+        Im ZIP liegt pro Schüler/in ein Ordner (z. B. <code>{{ assignment.school_class.name }}-001/</code>) –
+        ideal zum Hochladen in einen Claude-Chat für Bewertung und Punkte.
+    </p>
+    <div class="card" style="padding:0;overflow-x:auto;">
+        <table class="data">
+            <thead>
+                <tr>
+                    <th>Kennung</th>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Dateien</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in roster %}
+                    <tr>
+                        <td>{{ assignment.school_class.name }}-{{ row.student.number_padded }}</td>
+                        <td>{{ row.student.display_name|default:"—" }}</td>
+                        <td>
+                            {% if row.submission %}
+                                {% if row.submission.is_late %}
+                                    <span class="badge inactive">verspätet · {{ row.submission.updated_at|date:"d.m.Y H:i" }}</span>
+                                {% else %}
+                                    <span class="badge">abgegeben · {{ row.submission.updated_at|date:"d.m.Y H:i" }}</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="muted">offen</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if row.submission %}
+                                {% for file in row.submission.files.all %}
+                                    <a href="{% url 'worksheets:submission_file_download' file.pk %}">⬇️ {{ file.original_name }}</a>{% if not forloop.last %}<br>{% endif %}
+                                {% empty %}
+                                    <span class="muted">—</span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="muted">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <p class="muted">Für dieses Arbeitsblatt werden keine Abgaben eingesammelt.</p>
+{% endif %}
+
+<p class="muted">
+    Schüler/innen sehen dieses Arbeitsblatt nach dem Login mit ihrem Token auf ihrer Startseite.
+</p>
+{% endblock %}

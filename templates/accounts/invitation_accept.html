@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Konto anlegen{% endblock %}
+
+{% block content %}
+<div class="card card-narrow">
+    <h1>Konto anlegen</h1>
+    <p class="subtitle">
+        Einladung für <strong>{{ invitation.email }}</strong><br>
+        Schule: <strong>{{ invitation.school.name }}</strong>
+    </p>
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form.as_p }}
+        <div class="form-actions">
+            <button type="submit" class="btn">Konto erstellen</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

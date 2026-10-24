@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Kein Zugriff{% endblock %}
+
+{% block content %}
+<div class="card card-narrow error-page">
+    <div class="code">403</div>
+    <h1>Kein Zugriff</h1>
+    <p class="muted">Dafür fehlt die Berechtigung – oder das Formular war zu lange geöffnet. Bitte die Seite neu laden und noch einmal versuchen.</p>
+    <a class="btn" href="{% url 'home' %}">Zur Startseite</a>
+</div>
+{% endblock %}

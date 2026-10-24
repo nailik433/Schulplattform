@@ -1,0 +1,16 @@
+<a class="card card-link" href="{{ c.get_absolute_url }}">
+    <div class="card-link-top">
+        <strong style="font-size:1.1rem;">{{ c.name }}</strong>
+        {% if shared %}
+            <span class="chip chip-info">geteilt</span>
+        {% elif c.subject %}
+            <span class="chip">{{ c.subject }}</span>
+        {% endif %}
+    </div>
+    {% if shared and c.subject %}<div class="muted" style="margin-top:2px;">{{ c.subject }}</div>{% endif %}
+    <div class="class-meta">
+        <span title="aktive Schüler/innen">👩‍🎓 {{ c.n_students }}</span>
+        <span title="Arbeitsblätter">📄 {{ c.n_assignments }}</span>
+        <span title="Lernumgebungen">🧪 {{ c.n_lessons }}</span>
+    </div>
+</a>

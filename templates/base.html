@@ -1,0 +1,59 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f5f7">
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000">
+    <meta name="apple-mobile-web-app-title" content="Schulplattform">
+    <title>{% block title %}Schulplattform{% endblock %} – Schulplattform</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230071e3'/%3E%3Ctext x='50' y='68' font-size='54' text-anchor='middle'%3E📚%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body>
+<header class="site-header">
+    <div class="container header-inner">
+        <a class="brand" href="{% url 'home' %}">📚 Schulplattform</a>
+        <nav class="nav">
+            {% if user.is_authenticated %}
+                <a href="{% url 'schools:dashboard' %}">Meine Klassen</a>
+                <span class="nav-user">{{ user.get_full_name|default:user.email }}</span>
+                <form action="{% url 'accounts:logout' %}" method="post" class="inline-form">
+                    {% csrf_token %}
+                    <button type="submit" class="link-button">Abmelden</button>
+                </form>
+            {% elif current_student %}
+                <a href="{% url 'schools:student_home' %}">Meine Aufgaben</a>
+                <span class="nav-user">{{ current_student.label }}</span>
+                <a href="{% url 'schools:student_logout' %}">Abmelden</a>
+            {% else %}
+                <a href="{% url 'accounts:login' %}">Lehrer-Login</a>
+            {% endif %}
+        </nav>
+    </div>
+</header>
+
+<main class="container">
+    {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+                <li class="message {{ message.tags }}">{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+</main>
+
+<footer class="site-footer">
+    <div class="container">
+        <p>
+            Schulplattform &middot; digitale Arbeitsblätter &amp; Abgaben
+            &middot; <a href="{% url 'impressum' %}">Impressum</a>
+            &middot; <a href="{% url 'datenschutz' %}">Datenschutz</a>
+        </p>
+    </div>
+</footer>
+</body>
+</html>

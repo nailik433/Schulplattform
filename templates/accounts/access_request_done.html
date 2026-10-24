@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Anfrage gesendet{% endblock %}
+
+{% block content %}
+<div class="card card-narrow">
+    <h1>Danke – Anfrage gesendet ✅</h1>
+    <p>
+        Deine Anfrage wurde übermittelt. Sobald die Administration sie
+        freigegeben hat, erhältst du einen Einladungslink, mit dem du dein
+        Konto anlegen kannst.
+    </p>
+    <a class="btn btn-secondary" href="{% url 'home' %}">Zur Startseite</a>
+</div>
+{% endblock %}

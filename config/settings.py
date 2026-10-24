@@ -1,0 +1,268 @@
+"""
+Django settings for the Schulplattform project.
+
+Values that differ between development and production are read from
+environment variables so the same code can run locally (SQLite, DEBUG on)
+and on a rented server (Postgres, DEBUG off) without changes. See
+``.env.example`` for the variables you can set in production.
+"""
+
+import os
+from pathlib import Path
+
+from django.core.exceptions import ImproperlyConfigured
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def env_bool(name, default=False):
+    """Read a boolean-ish environment variable ("1", "true", "yes")."""
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def env_list(name, default=""):
+    """Read a comma-separated environment variable into a list of strings."""
+    raw = os.environ.get(name, default)
+    return [item.strip() for item in raw.split(",") if item.strip()]
+
+
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = env_bool("DJANGO_DEBUG", default=True)
+
+# SECURITY WARNING: keep the secret key used in production secret!
+# The insecure fallback is only ever used in DEBUG mode. In production a
+# missing DJANGO_SECRET_KEY stops the app from starting instead of silently
+# signing sessions with a key that is public on GitHub.
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "").strip()
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = "django-insecure-nur-fuer-lokale-entwicklung"
+    else:
+        raise ImproperlyConfigured(
+            "DJANGO_SECRET_KEY ist nicht gesetzt. Bitte in der .env eintragen "
+            "(erzeugen mit: python -c \"import secrets; print(secrets.token_urlsafe(50))\")."
+        )
+
+ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", default="localhost,127.0.0.1")
+
+# Hosts that may submit forms (needed behind HTTPS on a real domain).
+CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
+
+# When running inside GitHub Codespaces (for a quick beta test without a
+# rented server), make the app work over the forwarded *.app.github.dev URL
+# out of the box: trust the host, trust the HTTPS origin for CSRF, and treat
+# the request as secure. The Codespaces proxy terminates TLS and forwards to
+# the dev server over plain HTTP, so without the last line Django would think
+# the request is HTTP and reject form submissions (e.g. "Schule anlegen")
+# with a CSRF error.
+if DEBUG and os.environ.get("CODESPACES") == "true":
+    _codespaces_domain = os.environ.get(
+        "GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN", "app.github.dev"
+    )
+    ALLOWED_HOSTS.append("." + _codespaces_domain)
+    CSRF_TRUSTED_ORIGINS.append("https://*." + _codespaces_domain)
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+
+# Application definition
+
+INSTALLED_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    # Local apps
+    "accounts",
+    "schools",
+    "worksheets",
+    "lessons",
+]
+
+MIDDLEWARE = [
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+]
+
+ROOT_URLCONF = "config.urls"
+
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [BASE_DIR / "templates"],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+                "schools.context_processors.current_student",
+            ],
+        },
+    },
+]
+
+WSGI_APPLICATION = "config.wsgi.application"
+
+
+# Database
+# Defaults to SQLite for local development. Set DATABASE_URL-style variables
+# (DJANGO_DB_*) in production to use PostgreSQL instead.
+
+if os.environ.get("DJANGO_DB_NAME"):
+    DATABASES = {
+        "default": {
+            "ENGINE": os.environ.get(
+                "DJANGO_DB_ENGINE", "django.db.backends.postgresql"
+            ),
+            "NAME": os.environ["DJANGO_DB_NAME"],
+            "USER": os.environ.get("DJANGO_DB_USER", ""),
+            "PASSWORD": os.environ.get("DJANGO_DB_PASSWORD", ""),
+            "HOST": os.environ.get("DJANGO_DB_HOST", "localhost"),
+            "PORT": os.environ.get("DJANGO_DB_PORT", "5432"),
+            "CONN_MAX_AGE": 60,
+        }
+    }
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
+
+
+# Custom user model: teachers log in with their email address.
+AUTH_USER_MODEL = "accounts.User"
+
+AUTHENTICATION_BACKENDS = [
+    "accounts.backends.EmailBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
+LOGIN_URL = "accounts:login"
+LOGIN_REDIRECT_URL = "schools:dashboard"
+LOGOUT_REDIRECT_URL = "home"
+
+
+# Password validation
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {"min_length": 8},
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
+    },
+]
+
+
+# Email. Defaults to printing messages to the console so invitation links are
+# visible during development without an SMTP server. Configure the DJANGO_EMAIL_*
+# variables in production to actually send mail.
+EMAIL_BACKEND = os.environ.get(
+    "DJANGO_EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
+)
+EMAIL_HOST = os.environ.get("DJANGO_EMAIL_HOST", "")
+EMAIL_PORT = int(os.environ.get("DJANGO_EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("DJANGO_EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("DJANGO_EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = env_bool("DJANGO_EMAIL_USE_TLS", default=True)
+DEFAULT_FROM_EMAIL = os.environ.get(
+    "DJANGO_DEFAULT_FROM_EMAIL", "Schulplattform <noreply@localhost>"
+)
+
+# Absolute base URL used to build invitation links outside a request context.
+SITE_URL = os.environ.get("DJANGO_SITE_URL", "")
+
+# Data retention: submissions older than this many days are removed by the
+# `purge_submissions` management command (run it via cron). ~400 days keeps a
+# full school year. Set DJANGO_SUBMISSION_RETENTION_DAYS to change it.
+SUBMISSION_RETENTION_DAYS = int(
+    os.environ.get("DJANGO_SUBMISSION_RETENTION_DAYS", "400")
+)
+
+# Cache: holds the failed-login counters for brute-force protection. A
+# file-based cache is shared by all gunicorn workers in the container, so the
+# limits hold for the whole server (the default in-memory cache is per process).
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.filebased.FileBasedCache",
+        "LOCATION": str(BASE_DIR / ".cache"),
+        "TIMEOUT": 3600,
+    }
+}
+
+# Students log in on shared classroom iPads, so their session must not outlive
+# the school day; otherwise the next pupil would land in the previous one's
+# space. Teachers keep Django's default session length.
+STUDENT_SESSION_AGE = int(os.environ.get("DJANGO_STUDENT_SESSION_HOURS", "10")) * 3600
+
+
+# Internationalization
+LANGUAGE_CODE = "de"
+TIME_ZONE = "Europe/Berlin"
+USE_I18N = True
+USE_TZ = True
+
+
+# Static files (CSS, JavaScript, Images)
+STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = [BASE_DIR / "static"]
+
+# Uploaded files (student submissions, worksheets in later stages)
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
+    },
+}
+
+# Default primary key field type
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+# Security hardening that only takes effect in production (DEBUG off).
+if not DEBUG:
+    # Serve compressed, cache-busted static files straight from the app
+    # (via WhiteNoise) so no extra static file server is required. Only
+    # enabled when WhiteNoise is installed, so local development without it
+    # keeps working unchanged.
+    try:
+        import whitenoise  # noqa: F401
+
+        MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
+        STORAGES["staticfiles"]["BACKEND"] = (
+            "whitenoise.storage.CompressedManifestStaticFilesStorage"
+        )
+    except ImportError:
+        pass
+
+    SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", default=True)
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = int(os.environ.get("DJANGO_HSTS_SECONDS", "2592000"))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    X_FRAME_OPTIONS = "DENY"

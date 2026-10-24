@@ -1,0 +1,67 @@
+from django.urls import path
+
+from . import views
+
+app_name = "schools"
+
+urlpatterns = [
+    # Teacher area
+    path("uebersicht/", views.dashboard, name="dashboard"),
+    path("klasse/neu/", views.class_create, name="class_create"),
+    path("klasse/<int:pk>/", views.class_detail, name="class_detail"),
+    path("klasse/<int:pk>/loeschen/", views.class_delete, name="class_delete"),
+    path("klasse/<int:pk>/qr/", views.class_qr_document, name="class_qr_document"),
+    path("klasse/<int:pk>/fortschritt/", views.class_progress, name="class_progress"),
+    path("klasse/<int:pk>/freigabe/", views.class_share_add, name="class_share_add"),
+    path(
+        "klasse/<int:pk>/freigabe/<int:teacher_pk>/entfernen/",
+        views.class_share_remove,
+        name="class_share_remove",
+    ),
+    path("klasse/<int:pk>/schueler/hinzufuegen/", views.student_add, name="student_add"),
+    path(
+        "klasse/<int:pk>/schueler/anzahl/",
+        views.student_add_count,
+        name="student_add_count",
+    ),
+    path(
+        "klasse/<int:pk>/schueler/mehrere/",
+        views.student_bulk_add,
+        name="student_bulk_add",
+    ),
+    path(
+        "klasse/<int:pk>/schueler/<int:student_pk>/code-neu/",
+        views.student_regenerate_code,
+        name="student_regenerate_code",
+    ),
+    path(
+        "klasse/<int:pk>/schueler/<int:student_pk>/aktiv/",
+        views.student_toggle_active,
+        name="student_toggle_active",
+    ),
+    path(
+        "klasse/<int:pk>/schueler/<int:student_pk>/loeschen/",
+        views.student_delete,
+        name="student_delete",
+    ),
+    path(
+        "klasse/<int:pk>/schueler/mehrere-loeschen/",
+        views.student_bulk_delete,
+        name="student_bulk_delete",
+    ),
+    path(
+        "klasse/<int:pk>/schueler/import/",
+        views.student_import,
+        name="student_import",
+    ),
+    path(
+        "klasse/<int:pk>/schueler/<int:student_pk>/token/",
+        views.student_set_token,
+        name="student_set_token",
+    ),
+    # Student area. Literal routes first, then the token catch-all.
+    path("start/", views.student_home, name="student_home"),
+    path("s/", views.student_login, name="student_login"),
+    path("s/abmelden/", views.student_logout, name="student_logout"),
+    path("s/<str:token>/", views.student_space, name="student_space"),
+]
